@@ -1,0 +1,2 @@
+class MaskSplitException(Exception):
+    pass
