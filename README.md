@@ -17,7 +17,7 @@ This blender addon enables the editing of the IDMask array and pattern mask text
 1. Set up the helldivers 2 accurate shader for your model
     - See [this discord thread](https://discord.com/channels/1210541115829260328/1222290154409033889) for details and a video on how to do this
     - It comes down to exporting the mesh and associated textures. Specifically, the IDMask, Pattern mask, and LUTs
-    - Ignore the IDMask stuff in the setup; All you need here is the IDMask dds exported from the game.
+    - You need to keep a hold of the IDMask dds file exported from the game. An exr file or PNG will not work for this plugin.
     - You can also append objects from the [helldivers 2 armory](https://discord.com/channels/1210541115829260328/1446534760045482046), which has this set up for each armor set
 2. Modify the shader and import the IDMask dds
     1. in the node view of the shader, select and right click the main node. This will be named something like "HD2 Shader Template"
