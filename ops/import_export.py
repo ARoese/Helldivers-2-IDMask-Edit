@@ -176,11 +176,22 @@ class ExportToArrayOperator(bpy.types.Operator):
 
     filepath: bpy.props.StringProperty(name="ID Mask Array Path", subtype="FILE_PATH") #type: ignore
 
+    filter_glob: bpy.props.StringProperty(
+        default="*.dds",
+        options={'HIDDEN'},
+    ) #type: ignore
+
+    def draw(self, context):
+        layout = self.layout
+        assert layout is not None
+
+        layout.label(text="Export to a .dds file.", icon='INFO')
+
     def invoke(self, context: Context, event: Event) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
         assert context.window_manager is not None
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
-    
+
     def execute(self, context: Context) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
         an = context.active_node
         active_tree = context.space_data.edit_tree #type: ignore
@@ -192,6 +203,10 @@ class ExportToArrayOperator(bpy.types.Operator):
 
         input_texture_nodes = get_idmask_channel_texture_nodes(an)
         assert input_texture_nodes is not None
+
+        out_path = Path(self.filepath)
+        if out_path.suffix == ".blend":
+            raise Exception("Refusing to overwrite blend file!")
         
         def get_images(nodes: IDMaskImageNodes) -> IDMaskImages:
             images = tuple(node.image for node in nodes if node.image is not None)
@@ -199,7 +214,7 @@ class ExportToArrayOperator(bpy.types.Operator):
             return images
         
         images = get_images(input_texture_nodes)
-        out_path = Path(self.filepath)
+        
         _save_id_mask_array_from_images(out_path, images)
 
         return {'FINISHED'}
@@ -225,8 +240,18 @@ class MakeEditableOperator(bpy.types.Operator):
     bl_label = "Make Editable"
     bl_options = {'REGISTER', 'UNDO'}
 
-    # TODO: Better handling of this user interaction
     filepath: bpy.props.StringProperty(name="ID Mask Path", subtype="FILE_PATH") #type: ignore
+
+    filter_glob: bpy.props.StringProperty(
+        default="*.png;*.dds",
+        options={'HIDDEN'},
+    ) #type: ignore
+
+    def draw(self, context):
+        layout = self.layout
+        assert layout is not None
+
+        layout.label(text="Select a 2-layer RGBA dds file to import", icon='INFO')
 
     @classmethod
     def _construct_id_mask_input_nodes(cls, tree: bpy.types.ShaderNodeTree, images: IDMaskImages) -> IDMaskSockets:

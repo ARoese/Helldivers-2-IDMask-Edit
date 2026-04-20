@@ -59,8 +59,6 @@ The pattern mask doesn't need any special treatment. Although there is a button 
 ## TODO
 I will accept pull requests for anything that can be justified, but these are priorities
 
-- More restricted file types on import/export processes. Right now, it's the wild west. Anything that doesn't make sense will fail with a user-opaque error message, but that's not perfect. Export-wise, the file-type is ignored and a dds is emitted no matter what. This should be a little more clear in the flow.
-
 - Add more ops so that IDMask import/export can be done from basically anywhere, rather than just via the shader nodes area. `ops/painting.py` has some code for automatically finding the main group that will help with this.
 
 - The IDMask strip included in and used by the helldivers armory does have the information needed, but can't currently be imported and used. It'll be fairly easy to get working; the lower-level code is already written in `IDMask.py::from_strip_path()`, but there isn't a codepath that uses it in the UI.
