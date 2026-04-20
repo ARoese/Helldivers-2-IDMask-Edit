@@ -7,7 +7,7 @@ from .ops.painting import PaintMaterial, MaterialSwitcherPanel
 bl_info = {
     "name": "HD2 LUT Visual Edit",
     "blender": (4, 3, 0),
-    "version": (1, 0, 0),
+    "version": (1, 1, 0),
     "category": "Material",
 }
     
