@@ -24,10 +24,14 @@ class IDMask():
 
     def __init__(self, layers: IDMaskLayers):
         layers_flat = [*layers[0], *layers[1]]
+
+        for l in layers_flat:
+            l1s = l.size
+            l2s = layers_flat[0].size
+            if l1s != l2s:
+                raise MaskSplitException(f"Mask layer sizes do not match. ({l1s} != {l2s})")
+
         for i,l in enumerate(layers_flat):
-            if l.size != (256,256):
-                raise MaskSplitException("Mask is wrong size. Should be 256x256.")
-            
             if l.mode != 'L':
                 print("Converting non-greyscale channel to greyscale. Things might be weird.")
                 layers_flat[i] = l.convert('L')
