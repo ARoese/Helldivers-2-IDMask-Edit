@@ -61,6 +61,4 @@ I will accept pull requests for anything that can be justified, but these are pr
 
 - Add more ops so that IDMask import/export can be done from basically anywhere, rather than just via the shader nodes area. `ops/painting.py` has some code for automatically finding the main group that will help with this.
 
-- The IDMask strip included in and used by the helldivers armory does have the information needed, but can't currently be imported and used. It'll be fairly easy to get working; the lower-level code is already written in `IDMask.py::from_strip_path()`, but there isn't a codepath that uses it in the UI.
-
 - Better support for installing pillow

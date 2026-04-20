@@ -16,10 +16,8 @@ from .. import IDMask
 def _make_id_mask_images(path: Path) -> IDMaskImages:
     if path.suffix == ".dds":
         mask = IDMask.from_array(path)
-    elif path.suffix == ".png":
+    else: # assume any other image type is a strip
         mask = IDMask.from_strip_path(path)
-    else:
-        assert False
 
     name = path.stem
 
@@ -34,7 +32,7 @@ def _make_id_mask_images(path: Path) -> IDMaskImages:
             im = bpy.data.images.load(path.as_posix(), check_existing=False)
             im.name = path.stem
             im.pack()
-            # This is imporant; Color space transforms on these will really mess up the shader's behavior
+            # This is important; Color space transforms on these will really mess up the shader's behavior
             im.colorspace_settings.name = "Non-Color" #type: ignore
             return im
         
@@ -354,9 +352,11 @@ class MakeEditableOperator(bpy.types.Operator):
         assert isinstance(an, ShaderNodeGroup)
         assert an.node_tree is not None
 
-        # TODO: Set this to self.filepath
         #id_mask_array_path = Path("test/14455190118267868905.dds")
         id_mask_array_path = Path(self.filepath)
+
+        # make the id mask images from the array
+        id_mask_channels = _make_id_mask_images(id_mask_array_path)
 
         # patch up the shader if needed
         if not is_group_patched(an):
@@ -364,9 +364,6 @@ class MakeEditableOperator(bpy.types.Operator):
 
         # get the IDMask group inputs
         inputs = _get_group_inputs(an)
-
-        # make the id mask images from the array
-        id_mask_channels = _make_id_mask_images(id_mask_array_path)
 
         # try and get existing texture inputs, and create them if necessary
         # either way, the new channels get assigned
