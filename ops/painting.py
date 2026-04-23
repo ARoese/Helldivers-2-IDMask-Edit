@@ -1,32 +1,8 @@
 from typing import Literal, Tuple
 import bpy
 from bpy.types import Context
-from .import_export import is_main_node_group, is_group_patched, get_idmask_channel_texture_nodes, trace_to_textures
 
-def _find_shader_graph_node(obj: bpy.types.Object) -> bpy.types.ShaderNodeGroup | None:
-    for ms in obj.material_slots:
-        if ms.material is None:
-            continue
-
-        if not ms.material.use_nodes:
-            continue
-        
-        if ms.material.node_tree is None:
-            continue
-        
-        for node in ms.material.node_tree.nodes:
-            if node is None:
-                continue
-            if isinstance(node, bpy.types.ShaderNodeGroup) and is_main_node_group(node):
-                return node
-            
-def _find_pattern_mask_node(main_group: bpy.types.ShaderNodeGroup) -> bpy.types.ShaderNodeTexImage | None:
-    tl = trace_to_textures(main_group.inputs["Pattern Mask Array"])
-    if len(tl) == 0:
-        return None
-
-    return tl[0]
-
+from .utils import accurate_shader
 
 class PaintMaterial(bpy.types.Operator):
     bl_idname = "hd2visual.paint_material"
@@ -66,9 +42,9 @@ class PaintMaterial(bpy.types.Operator):
 
     def execute(self, context: Context) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
         assert context.active_object is not None
-        main_group = _find_shader_graph_node(context.active_object)
+        main_group = accurate_shader.find_main_group(context.active_object)
         assert main_group is not None
-        texture_nodes = get_idmask_channel_texture_nodes(main_group)
+        texture_nodes = main_group.get_idmask_channel_texture_nodes()
         assert texture_nodes is not None
         am = context.active_object.active_material
         assert am is not None
@@ -87,7 +63,7 @@ class PaintMaterial(bpy.types.Operator):
             
         # set image being edited
         if self.set_pattern_mask:
-            pattern_mask_node = _find_pattern_mask_node(main_group)
+            pattern_mask_node = main_group.find_pattern_mask_node()
             assert pattern_mask_node is not None and pattern_mask_node.image is not None
 
             am.paint_active_slot = find_paint_slot_index(pattern_mask_node.image.name)
@@ -102,20 +78,20 @@ class PaintMaterial(bpy.types.Operator):
     @classmethod
     def poll(cls, context: Context) -> bool:
         ao = context.active_object
-        if ao is None or ao.active_material is None or (main_group := _find_shader_graph_node(ao)) is None:
+        if ao is None or ao.active_material is None or (main_group := accurate_shader.find_main_group(ao)) is None:
             cls.poll_message_set("Could not find editable material")
             return False
         
-        if not is_group_patched(main_group):
+        if not main_group.is_patched():
             cls.poll_message_set("Shader group must be patched")
             return False
         
-        texture_nodes = get_idmask_channel_texture_nodes(main_group)
+        texture_nodes = main_group.get_idmask_channel_texture_nodes()
         if texture_nodes is None:
             cls.poll_message_set("Could not find IDMask channel input nodes")
             return False
         
-        mask_node = _find_pattern_mask_node(main_group)
+        mask_node = main_group.find_pattern_mask_node()
         if mask_node is None or mask_node.image is None:
             cls.poll_message_set("Could not find pattern mask channel input node")
             return False

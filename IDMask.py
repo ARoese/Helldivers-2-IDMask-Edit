@@ -1,66 +1,60 @@
 from PIL import Image
 from PIL.Image import Image as ImageClass
 from io import BytesIO
-import os
-from typing import Set, Tuple, List
+from typing import Iterable, Tuple, List, Self
 from pathlib import Path
 import subprocess
 import tempfile
-import sys
+import itertools
 
+from .itertools_ext import batched
+from . import env
 from .exception import MaskSplitException
 
 IDMaskLayer = Tuple[ImageClass, ImageClass, ImageClass, ImageClass]
 IDMaskLayers = Tuple[IDMaskLayer, IDMaskLayer]
 
-ADDON_PATH = Path(os.path.dirname(__file__))
-if sys.platform == 'linux':
-    TEXASSEMBLE_BIN = ADDON_PATH / "deps" / "texassemble"
-else:
-    TEXASSEMBLE_BIN = ADDON_PATH / "deps" / "Texassemble.exe"
+class PackedChannels:
+    channels: List[ImageClass]
 
-class IDMask():
-    layers: IDMaskLayers
-
-    def __init__(self, layers: IDMaskLayers):
-        layers_flat = [*layers[0], *layers[1]]
-
-        for l in layers_flat:
+    def __init__(self, channels: List[ImageClass]):
+        for l in channels:
             l1s = l.size
-            l2s = layers_flat[0].size
+            l2s = channels[0].size
             if l1s != l2s:
-                raise MaskSplitException(f"Mask layer sizes do not match. ({l1s} != {l2s})")
+                raise ValueError(f"Layer sizes do not match. ({l1s} != {l2s}) This is a programmer error.")
 
-        for i,l in enumerate(layers_flat):
+        for i,l in enumerate(channels):
             if l.mode != 'L':
                 print("Converting non-greyscale channel to greyscale. Things might be weird.")
-                layers_flat[i] = l.convert('L')
+                channels[i] = l.convert('L')
 
-        l1 = tuple(layers_flat[:4])
-        l2 = tuple(layers_flat[4:])
-        assert len(l1) == 4
-        assert len(l2) == 4
-        self.layers = (l1, l2)
+        self.channels = channels
+    
+    def dim(self) -> Tuple[int, int]:
+        return self.channels[0].size
+    
+    def num_channels(self) -> int:
+        return len(self.channels)
 
-    def swizzle_layers(self) -> Tuple[ImageClass, ImageClass]:
-        layer1, layer2 = self.layers
-
-        return Image.merge("RGBA", bands=layer1), Image.merge("RGBA", bands=layer2)
+    def swizzle_layers(self) -> List[ImageClass]:        
+        layers = batched(self.channels, 4, pad_with=lambda: Image.new(mode="L", size=self.dim()))
+        images = [Image.merge("RGBA", bands=layer) for layer in layers]
+        return images
     
     def to_strip(self) -> ImageClass:
-        layer1, layer2 = self.swizzle_layers()
+        swizzled = self.swizzle_layers()
 
-        x,y = layer1.size
-        new_img = Image.new("RGBA", (x, y*2))
+        x,y = self.dim()
+        target_image = Image.new(mode="RGBA", size=(x, y*len(swizzled)))
 
-        new_img.paste(layer1, (0,0))
-        new_img.paste(layer2, (0, y))
-        return new_img
+        for i,img in enumerate(swizzled):
+            y_offset = i*y
+            target_image.paste(img, (0, y_offset))
+        
+        return target_image
     
     def to_array(self) -> BytesIO:
-        '''
-        returns an array dds file
-        '''
         output = BytesIO()
 
         tmpdir = tempfile.mkdtemp()
@@ -68,89 +62,90 @@ class IDMask():
         # This is omitted because I don't want the directories getting cleaned up right now
         if True:
             tmpdir = Path(tmpdir)
-            layer_1 = tmpdir / "1.png"
-            layer_2 = tmpdir / "2.png"
-            output_file = tmpdir / "out.dds"
-            layers = self.swizzle_layers()
-            
-            layers[0].save(layer_1, format="png")
-            layers[1].save(layer_2, format="png")
+            swizzled_layers = self.swizzle_layers()
+            layer_paths = [tmpdir / f"{n+1}.png" for n in range(len(swizzled_layers))]
+            output_path = tmpdir / "out.dds"
+            for path, layer in zip(layer_paths, swizzled_layers):
+                layer.save(path, format="png")
 
-            layers = self.swizzle_layers()
             res = None
             try:
-                res = subprocess.run([TEXASSEMBLE_BIN.as_posix(), "array", "-y", "-f", "R8G8B8A8_UNORM", "-dx10", "-o", output_file, "--", layer_1.as_posix(), layer_2.as_posix()],
-                                    stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+                args = [env.TEXASSEMBLE_BIN.as_posix(), "array", "-y", "-f", "R8G8B8A8_UNORM", "-dx10", "-o", output_path, "--"]
+                args.extend([lp.as_posix() for lp in layer_paths])
+                res = subprocess.run(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
                 res.check_returncode()
             except Exception as e:
                 out = res.stdout if res is not None else b"[No output]"
                 out = out.decode()
                 raise MaskSplitException(f"texassemble failed:\n{out}") from e
             
-            if not output_file.exists():
-                raise MaskSplitException(f"texassemble output '{output_file.as_posix()}' does not exist!")
+            if not output_path.exists():
+                raise MaskSplitException(f"texassemble output '{output_path.as_posix()}' does not exist!")
         
-            with open(output_file, 'rb') as output_file:
-                output.write(output_file.read())
+            with open(output_path, 'rb') as output_path:
+                output.write(output_path.read())
         
         return output
-
+    
     def save_channels(self, dest: Path, name: str, file_type: str = "png") -> List[Path]:
-        '''list is of length 8, sorted in ascending channel order'''
+        '''list is sorted in ascending channel order'''
         dest_paths = []
-        for (channel, num) in zip([*self.layers[0], *self.layers[1]], "12345678"):
-            dest_path = dest / f"{name}-{num}.{file_type}"
+        for (channel, num) in zip(self.channels, range(self.num_channels())):
+            dest_path = dest / f"{name}-{num+1}.{file_type}"
 
             channel.save(dest_path)
             dest_paths.append(dest_path)
         
         return dest_paths
+    
+    def extend(self, others: Iterable[Self]):
+        for o in others:
+            self.channels.extend(o.channels)
 
-    def dim(self) -> Tuple[int, int]:
-        return self.layers[0][0].size
-
-    def get_overlap_percentage(self) -> float:
-        '''
-        Calculate the proportion of pixels which are overlap. Overlap occurs when multiple channels 
-        are non-zero for a single pixel, introducing ambiguity as to which material will get applied at that point.
-        '''
-
-        x,y = self.dim()
-        pixel_count = x*y
-        pixel_generators = [(1 if p else 0 for p in img.getdata()) for img in (*self.layers[0], *self.layers[1])] # type: ignore
-
-        overlap_count = 0
-        # vals is Tuple[8; int]
-        for vals in zip(*pixel_generators):
-            if sum(vals) > 1:
-                overlap_count+=1
+    def paste(self, other: Self, corner: Tuple[int, int], depth: int = 0):        
+        if other.num_channels() + depth > self.num_channels():
+            raise ValueError("Not enough channel depth for this paste.")
         
-        return overlap_count / pixel_count
+        for my_channel, their_channel in zip(self.channels[depth:], other.channels):
+            my_channel.paste(their_channel, corner)
 
-def from_strip(image: ImageClass) -> IDMask:
+def empty_channel_pack(depth: int, dim: Tuple[int, int]) -> PackedChannels:
+    channels = [Image.new(mode="L", size=dim) for _ in range(depth)]
+    return PackedChannels(channels)
+
+def from_strip(image: ImageClass, n_layers: int | None = None) -> PackedChannels:
     x,y = image.size
 
-    if y != 2*x:
-        raise MaskSplitException("wrong input image dimensions. y dim should be 2*x")
-    layer_1=image.crop((0, 0, x, y//2))
-    layer_2=image.crop((0, y//2, x, y))
-
-    layer_1,layer_2 = (layer_1.split(), layer_2.split())
-
-    if len(layer_1) != 4 or len(layer_2) != 4:
-        raise MaskSplitException("input image did not have enough channels")
+    if n_layers is None:
+        div = y / x
+        num_layers = int(div)
+        if x*num_layers != y:
+            raise MaskSplitException(f"y dimension is not a clean multiple of x dimension. ({x}x{y})")
+    else:
+        num_layers = n_layers
     
-    return IDMask((layer_1, layer_2))
+    y_height = y // num_layers
+    
+    layers = [image.crop((0, layer*y_height, x, (layer+1)*y_height)) for layer in range(num_layers)]
+    layers = [layer.split() for layer in layers]
+    layers = list(itertools.chain(*layers))
+    
+    return PackedChannels(layers)
 
-def from_strip_path(src: Path) -> IDMask:
+def from_strip_path(src: Path, expect_2_layers: bool = False) -> PackedChannels:
     img = Image.open(src)
+
+    x, y = img.size
+    if expect_2_layers and y != 2*x:
+        img = img.resize((x, 2*x))
+
     return from_strip(img)
 
-def from_array(src: Path) -> IDMask:
+def from_array(src: Path) -> PackedChannels:
     res = None
     try:
         temp_output = Path(tempfile.gettempdir()) / f"{src.stem}.png"
-        res = subprocess.run([TEXASSEMBLE_BIN.as_posix(), "array-strip", "-y", "-f", "R8G8B8A8_UNORM", "-o", temp_output.as_posix(), "--", src.absolute().as_posix()],
+        res = subprocess.run([env.TEXASSEMBLE_BIN.as_posix(), "array-strip", "-y", "-f", "R8G8B8A8_UNORM", "-o", temp_output.as_posix(), "--", src.absolute().as_posix()],
                               stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         res.check_returncode()
     except Exception as e:
@@ -187,7 +182,7 @@ def _find_channels(root: Path, name: str) -> List[ImageClass]:
 
     return [g[1] for g in images]
 
-def from_channels_dir(root_dir: Path, name: str | None = None) -> IDMask:
+def from_channels_dir(root_dir: Path, name: str | None = None) -> PackedChannels:
     def _infer_names() -> List[str]:
         names = [file.stem.rsplit("-", maxsplit=1)[0] for file in root_dir.iterdir() if file.is_file() and "-" in file.stem]
 
@@ -208,7 +203,6 @@ def from_channels_dir(root_dir: Path, name: str | None = None) -> IDMask:
     if len(channels) != 8:
         raise MaskSplitException(f"expected 8 channels. Only found {len(channels)}.")
     
-    l1 = tuple(channels[:4])
-    l2 = tuple(channels[4:])
+    pack = PackedChannels(channels)
     
-    return IDMask((l1, l2)) #type: ignore
+    return pack
