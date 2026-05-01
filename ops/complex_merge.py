@@ -90,14 +90,21 @@ class ComplexMerge(bpy.types.Operator):
             normal_node = mg.get_normal_texture_node()
             pattern_mask_node = mg.find_pattern_mask_node()
 
-            if (id_mask is None 
-                or primary_lut_node is None 
-                or primary_lut_node.image is None 
-                or secondary_lut_node is None
-                or secondary_lut_node.image is None
-                or normal_node is None 
-                or normal_node.image is None
-            ):
+            print("id mask:", id_mask)
+            if id_mask is None:
+                print("failed to find id mask")
+                return None
+            
+            if primary_lut_node is None or primary_lut_node.image is None:
+                print("failed to find primary lut")
+                return None
+            
+            if secondary_lut_node is None or secondary_lut_node.image is None:
+                print("failed to find secondary lut")
+                return None
+
+            if normal_node is None or normal_node.image is None:
+                print("failed to find normal")
                 return None
 
             primary_lut = lut_from_blender_image(primary_lut_node.image)

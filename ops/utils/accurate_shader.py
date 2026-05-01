@@ -127,6 +127,8 @@ class AccurateShaderMainGroup:
         
         if mask.num_channels() != 8:
             raise ValueError(f"Expected 8 channels. Got {mask.num_channels()}")
+        
+        return mask
 
     def find_pattern_mask_node(self) -> bpy.types.ShaderNodeTexImage | None:
         tl = trace_to_textures(self.ref.inputs["Pattern Mask Array"])
