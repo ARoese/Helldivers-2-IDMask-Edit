@@ -96,6 +96,10 @@ The secondary LUTs aren't useful, but they are merged anyways in case more is le
 
 - Texassemble from [DirectXTex](https://github.com/microsoft/DirectXTex) is used internally. Its license is included at `deps/LICENSE`.
 
+- Recommended commands for making a release:
+    1. $`git archive HEAD -o ../IDMask-Edit.zip`
+    2. unzip and re-zip the IDMask-Edit zip so that it has a parent folder in the zip
+
 ## TODO
 I will accept pull requests for anything that can be justified, but these are priorities
 
