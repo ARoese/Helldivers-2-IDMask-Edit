@@ -1,0 +1,10 @@
+[package]
+name = "LUTranslate"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dds = "0.2.0"
+itertools = "0.14.0"
+clap = { version = "4.6.1", features = ["derive"] }
+clap_derive = "4.6.1"
