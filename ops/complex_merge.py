@@ -217,7 +217,7 @@ class ComplexMerge(bpy.types.Operator):
         output_dir = Path(self.directory)
         with open(output_dir / f"{ao.name}-lut-atlas.dds", 'wb') as out_file:
             out_file.write(lut_stack.to_dds().getbuffer())
-        with open(output_dir / f"{ao.name}secondary-lut-atlas.dds", 'wb') as out_file:
+        with open(output_dir / f"{ao.name}-secondary-lut-atlas.dds", 'wb') as out_file:
             out_file.write(secondary_lut_stack.to_dds().getbuffer())
         with open(output_dir / f"{ao.name}-idmask-atlas.dds", 'wb') as out_file:
             out_file.write(target_array.getbuffer())
