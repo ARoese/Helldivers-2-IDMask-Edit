@@ -8,7 +8,7 @@ from .ops.complex_merge import ComplexMerge
 bl_info = {
     "name": "HD2 LUT Visual Edit",
     "blender": (4, 3, 0),
-    "version": (1, 2, 0),
+    "version": (1, 2, 1),
     "category": "Material",
 }
     
