@@ -218,7 +218,6 @@ class ComplexMerge(bpy.types.Operator):
                 lut_stack.extend(primary_lut)
                 secondary_lut_stack.extend(secondary_lut)
         
-        idmask_atlas.save_channels(Path("test_outputs/channels/"), name="atlas_channels", file_type="png")
         target_array = idmask_atlas.to_array()
 
         output_dir = Path(self.directory)
