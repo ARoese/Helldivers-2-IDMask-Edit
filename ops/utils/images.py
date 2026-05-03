@@ -71,6 +71,7 @@ def save_id_mask_array_from_images(dest_path: Path, images: IDMaskImages):
 def pillow_image_from_blender_image(blend_image: bpy.types.Image) -> PILImageType:
     '''accepts an image with 1, 3, or 4 channels'''
 
+    print(f"Converting {blend_image.name}")
     dim_x,dim_y = blend_image.size
     nchannels = blend_image.channels
 
@@ -110,8 +111,8 @@ def id_mask_from_blender_channels(channels: List[bpy.types.Image]) -> PackedChan
             channel.save(filepath=channel_path.as_posix())
 
         mask = IDMask.from_channels_dir(tdp)
-        if mask.num_channels != 8:
-            raise ValueError(f"id mask did not have 8 channels. Found {mask.num_channels} channels instead")
+        if mask.num_channels() != 8:
+            raise ValueError(f"id mask did not have 8 channels. Found {mask.num_channels()} channels instead")
         
         return mask
     

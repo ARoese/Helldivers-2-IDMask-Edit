@@ -84,13 +84,14 @@ class ComplexMerge(bpy.types.Operator):
             if mg is None:
                 return None
             
+            print(f"assembling pieces for '{obj.name}'")
+            
             id_mask = mg.get_idmask()
             primary_lut_node = mg.get_primary_lut_texture_node()
             secondary_lut_node = mg.get_secondary_lut_texture_node()
             normal_node = mg.get_normal_texture_node()
             pattern_mask_node = mg.find_pattern_mask_node()
 
-            print("id mask:", id_mask)
             if id_mask is None:
                 print("failed to find id mask")
                 return None
@@ -106,9 +107,10 @@ class ComplexMerge(bpy.types.Operator):
             if normal_node is None or normal_node.image is None:
                 print("failed to find normal")
                 return None
-
+            print("Loading LUTs")
             primary_lut = lut_from_blender_image(primary_lut_node.image)
             secondary_lut = lut_from_blender_image(secondary_lut_node.image)
+            print("done Loading LUTs")
 
             idmd = id_mask.dim()
             if idmd[0] != idmd[1]:
@@ -132,6 +134,8 @@ class ComplexMerge(bpy.types.Operator):
             #normal.save(Path("test_outputs/example_normal.png"))
             res = (obj, id_mask, pattern_mask, primary_lut, secondary_lut, normal)
             # pprint.pprint(res)
+            print("assembled pieces: ")
+            pprint.pprint(res)
             return res
         
         # do square packing
