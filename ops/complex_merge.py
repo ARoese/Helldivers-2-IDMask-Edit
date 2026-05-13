@@ -45,8 +45,9 @@ def uv_scale_translate(layer: bpy.types.MeshUVLoopLayer, scale: float, translate
 AtlasPieces = Tuple[bpy.types.Object, PackedChannelsType, PILImageType | None, LUTType, LUTType, PILImageType]
 
 class ComplexMerge(bpy.types.Operator):
+    '''Deprecated. Use ComplexMergeNoAtlas instead'''
     bl_idname = "hd2visual.complex_merge"
-    bl_label = "Complex Merge"
+    bl_label = "Complex Merge (deprecated)"
     bl_options = {'REGISTER', 'UNDO'}
 
     # Properties to store the selection
@@ -203,7 +204,7 @@ class ComplexMerge(bpy.types.Operator):
             # move uvs
             uv_scale_translate(uv_layer, scale_factor, (px,py))
             # paste IDMask into atlas
-            idmask_atlas.paste(id_mask, placement.top_left(), piece_idx*8)
+            idmask_atlas.paste(id_mask, piece_idx*8, placement.top_left())
             if pattern_mask is not None:
                 pattern_mask_atlas.paste(pattern_mask, placement.top_left())
 

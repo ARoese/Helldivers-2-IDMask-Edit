@@ -10,7 +10,8 @@ This blender addon enables the editing of the IDMask array and pattern mask text
     - At least one of these commands I wrote will also do it: 
         - `path\to\blender.exe -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow"]);'`
         - `blender -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow"]);'`
-2. install the addon via edit > preferences > Add-ons > Install from disk (top right)
+2. install the [Helldivers 2 SDK](https://github.com/Boxofbiscuits97/HD2SDK-CommunityEdition)
+3. install the addon via edit > preferences > Add-ons > Install from disk (top right)
 
 
 ## Setup
@@ -26,7 +27,8 @@ This blender addon enables the editing of the IDMask array and pattern mask text
     3. Select the IDMask array dds you exported from helldivers.
         - You do not need to pre-process this file at all. Directly exported via the sdk or filediver should be fine. IDMasks exported using this addon should also work.
 
-Note: Once you modify the shader in step 2, then the original script that is used to "update" it will PROBABLY not work anymore. It's most likely to just shred it. Just re-creating it is probably best.
+> [!WARNING]
+> Once you modify the shader in step 2, then the original script that is used to "update" it will PROBABLY not work anymore. It's most likely to just shred it. Just re-creating it is probably best.
 
 When these docs mention "The main group" or "The main node", they mean this one on the right
 ![main node](README_assets/main_node.png)
@@ -52,34 +54,34 @@ When you're done painting and ready to make a patch or otherwise use the IDMask 
 The pattern mask doesn't need any special treatment. Although there is a button for quickly editing it, there is no special process for exporting it. If you added it as an external file, then the changes will be saved automatically by blender when prompted. Otherwise, you'll need to unpack or directly save the image. Basically, do the inverse of however you originally added it to the accurate shader.
 
 ### Asset Merging
-Objects using the accurate shader can be merged. This will atlas the ID mask arrays, pattern masks, normals, primary LUTs, and secondary LUTs of the merged objects. 
+Objects using the accurate shader can be merged. This will combine the primary and secondary LUTs of the merged objects, and stack the IDMasks to conform with those new LUTs. This is required because armor primary LUTs are hard-coded. Even when using multiple armor lut materials on a single armor, they are all hard-coded to use the same primary LUT. This merging process produces a valid shared primary LUT and IDMasks that correctly index into it.
 The secondary LUTs aren't useful, but they are merged anyways in case more is learned about them. These merged objects do **NOT** respect other LUT edit mods, but they will have blood and gunk visible.
+
+> [!TIP]
+> Accurate shader materials that have been modified for IDMask painting (described in the above section) will work seamlessly here. You **DON'T** need to create a new one that used the produced dds file directly.
 
 | |                                   |                    |
 |---|-----------------------------------|--------------------|
 | ![toolbar](README_assets/merge_assets.png) | ![toolbar](README_assets/complex_merge_result.png)  | ![toolbar](README_assets/complex_merge_result_with_gunk.png)  |
 
-
-1. Select all objects to be merged in object mode. 
+1. Ensure a patch is active in the SDK.
+    - You can click "new patch" to make a new one
+2. Select all objects to be merged in object mode. 
     - Each one should have ONLY the accurate shader.
     - The active object (the last object selected and highlighted orange instead of red) matters here. It should be the unit you are eventually replacing with this merged object.
     (read: the object you will be copying helldiver properties from)
-2. Click "Merge assets" in the context menu
-3. Select atlas output folder
-    - The resultant object will appear broken in blender from this point on. Trust the process.
+3. Click "Merge assets" in the context menu
+4. Select output folder
+    - The resultant object will appear black in material preview mode from this point forward. Trust the process.
 
-5 files are placed into the selected output folder, where OBJECT_NAME is the name of the active object:
-- `OBJECT_NAME-idmask-atlas.dds`
-- `OBJECT_NAME-normal-atlas.png`
-- `OBJECT_NAME-pattern-mask-atlas.png`
-- `OBJECT_NAME-lut-atlas.dds`: primary lut stack
+An SDK-compatible armor LUT material is created for each object, and the objects are merged into one. The relevant inputs are also wired up automatically. The resultant object is ready to be added to the patch.
+
+2 files are placed into the selected output folder, where OBJECT_NAME is the name of the active object:
+- `OBJECT_NAME-primary-lut-atlas.dds`: primary lut stack
 - `OBJECT_NAME-secondary-lut-atlas.dds`: secondary lut stack (not useful for you)
+Additionally, an id mask array is created for each merged object. They are named as `OBJECT_NAME-idmask.dds`. The armor LUT materials are automatically wired up using the textures in the accurate shader. Files were automatically converted as necessary.
 
-4. Make a new "Armor LUT" material using the SDK and apply it to the merged object. 
-    - The HD2 accurate shader material may still be on the merged object. Remove them so that the Armor LUT or other SDK materials are there.
-5. Set that material's texture inputs to the corresponding atlases that were produced by step 3.
-6. Copy the HD2 properties of the unit you are replacing onto the merged object, and save the unit.
-7. If you are producing an armor, (you probably are) then **also** replace that armor's primary LUT with the LUT atlas in the patch, because that is hard-coded.
+5. If you are producing an armor, (you probably are) then **also** replace that armor's primary LUT with the LUT atlas (`OBJECT_NAME-primary-lut-atlas.dds`) in the patch, because that is hard-coded.
     - This overwrites the primary LUT for that entire armor set, and thus will affect other pieces of your armor. If you made sure that your active object selected
     in step 1 would also uses that armor's primary LUT, then the first 8 rows of the primary LUT atlas will be the armor set's entire primary LUT. The result is that 
     "dumb" armor pieces with only 8-channel IDMasks will still use only those rows, and your extra LUT rows are hidden away from them using IDMask channels they lack.
@@ -94,10 +96,10 @@ The secondary LUTs aren't useful, but they are merged anyways in case more is le
 - If any of the relevant textures is a data block with a broken link, (it is an external or linked image, and that link is broken) then blender will hang and just eat ram. This can happen sometimes when using arsenal shaders that have been appended from another blend file. If your material looks broken, then merging with it might fail!
 
 ## Other Notes
-- This add-on is platform-independent. I develop on linux, but windows is supported. The only platform-dependent stuff is the calls to Texassemble and LUTranslate, and the platform is detected automatically.
-    - On linux, a sufficiently mature wine install and prefix should be available. If it can play a game, then it can do this. If your setup is weird, then modify the shim at `deps/texassemble` accordingly.
+- This add-on is platform-independent. I develop on linux, but windows is supported. The only platform-dependent stuff is the calls to Texassemble, Texconv, and LUTranslate, and the platform is detected automatically.
+    - On linux, a sufficiently mature wine install and prefix should be available. If it can play a game, then it can do this. If your setup is weird, then modify the shims at `deps` accordingly.
 
-- Texassemble from [DirectXTex](https://github.com/microsoft/DirectXTex) is used internally. Its license is included at `deps/LICENSE`.
+- Texassemble and Texconv from [DirectXTex](https://github.com/microsoft/DirectXTex) are used internally. Their license is included at `deps/LICENSE`.
 
 - Recommended commands for making a release:
     1. $`git archive HEAD -o ../IDMask-Edit.zip`
@@ -109,13 +111,3 @@ I will accept pull requests for anything that can be justified, but these are pr
 - Add more ops so that IDMask import/export can be done from basically anywhere, rather than just via the shader nodes area. `ops/painting.py` has some code for automatically finding the main group that will help with this.
 
 - Better support for installing pillow
-
-- Complex Merge can be done more efficiently to produce smaller textures. Atlasing is not required.
-    1. Make an LUT stack of all the constituent objects
-    2. Make a unique IDMask stack for each object.
-        - it should have a depth of 8*N where N is the number of objects being merged
-        - For each object, the IDMask channels corresponding to the other objects need to be black. Otherwise, there will be cross-object conflicts here because of overlapping UVs.
-        - Each IDMasks only need to be as deep as the last content-containing contituent IDMask. The remaining blank layers associated with other objects can be cut off. 
-    3. Make an SDK material for each component object. Apply them. Assign the normals, decals, etc. accordingly.
-
-    - Bonus points for deep SDK integration. That means creating, assigning, and populating the materials.

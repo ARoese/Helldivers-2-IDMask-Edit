@@ -105,6 +105,25 @@ class AccurateShaderMainGroup:
         
         return None
     
+    def get_decal_texture_node(self) -> ShaderNodeTexImage | None:
+        '''gets the texture node for the decal texture'''
+        
+        nodes = trace_to_textures(self.ref.inputs["Decal Texture"])
+        if nodes:
+            return nodes[0]
+        
+        return None
+    
+    def get_pattern_lut_texture_node(self) -> ShaderNodeTexImage | None:
+        '''gets the pattern lut texture node'''
+        
+        nodes = trace_to_textures(self.ref.inputs["Pattern LUT"])
+        if nodes:
+            return nodes[0]
+        
+        return None
+
+    
     def get_idmask(self) -> PackedChannelsType | None:
         if self.is_patched():
             tns = self.get_idmask_channel_texture_nodes()

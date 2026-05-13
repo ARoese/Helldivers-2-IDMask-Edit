@@ -1,6 +1,7 @@
 from typing import List, Callable, Tuple
 
 import bpy
+from bpy.path import abspath, relpath
 from bpy.types import ShaderNodeGroup
 from tempfile import mkdtemp
 from pathlib import Path
@@ -14,6 +15,35 @@ from ... import LUT
 from ...LUT import LUT as LUTType
 
 from ...itertools_ext import batched
+import subprocess
+from ... import env
+
+def ensure_not_unpacked_exr(img: Image):
+    if img.packed_file is not None:
+        raise ValueError(f"Expected packed image. Given image {img.name} was not packed.")
+    
+    path = img.filepath_raw
+    if ".exr" not in path:
+        return
+    
+    path = Path(abspath(path))
+    res = None
+    try:
+        res = subprocess.run([env.TEXCONV_BIN.as_posix(), "-ft", "dds", "-y", "-dx10", "-o", path.parent, "--", path.as_posix()], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        res.check_returncode()
+    except Exception as e:
+        out = res.stdout if res is not None else b"[No output]"
+        out = out.decode()
+        raise Exception(f"texconv failed:\n{out}") from e
+    
+    dds_path = path.with_suffix(".dds")
+    if not dds_path.exists():
+        raise Exception(f"texconv did not fail, but the file {dds_path.as_posix()} still does not exist")
+    
+    # do this so that relative/non-relative status is not affected
+    img.filepath_raw = relpath(Path(img.filepath_raw).with_suffix(".dds").as_posix())
+    img.name = img.name.replace(".exr", ".dds")
+
 
 def lut_from_blender_image(image: Image) -> LUTType:
     iterable_image_pixels = image.pixels[:] #type: ignore # This type is wrong. pixels is an iterable of float, not a float

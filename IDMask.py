@@ -34,6 +34,13 @@ class PackedChannels:
     def dim(self) -> Tuple[int, int]:
         return self.channels[0].size
     
+    def resize(self, dim: Tuple[int, int]) -> "PackedChannels":
+        if self.dim() == dim:
+            return PackedChannels(self.channels)
+        
+        resized = [channel.resize(dim) for channel in self.channels]
+        return PackedChannels(resized)
+    
     def num_channels(self) -> int:
         return len(self.channels)
 
@@ -102,7 +109,7 @@ class PackedChannels:
         for o in others:
             self.channels.extend(o.channels)
 
-    def paste(self, other: Self, corner: Tuple[int, int], depth: int = 0):        
+    def paste(self, other: Self, depth: int = 0, corner: Tuple[int, int] = (0,0)):        
         if other.num_channels() + depth > self.num_channels():
             raise ValueError("Not enough channel depth for this paste.")
         
