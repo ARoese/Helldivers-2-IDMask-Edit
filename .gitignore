@@ -3,3 +3,5 @@ test_outputs
 test
 big_blend.blend
 LUTranslate_rust/target
+
+release/*

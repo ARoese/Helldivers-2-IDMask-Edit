@@ -5,13 +5,20 @@ This blender addon enables the editing of the IDMask array and pattern mask text
 **This add-on is for blender 4.3**. It probably also works on other versions, but that's not guarunteed. 
 
 ## Installation
-1. install the pillow library to blender's bundled python env
+1. install the [Helldivers 2 SDK](https://github.com/Boxofbiscuits97/HD2SDK-CommunityEdition)
+2. install the addon via edit > preferences > Add-ons > Install from disk (top right)
+3. install the PIL (python library)
     - Some other add-on probably already installed it. If you use Material Combiner, then that did it for you.
-    - At least one of these commands I wrote will also do it: 
-        - `path\to\blender.exe -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow"]);'`
-        - `blender -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow"]);'`
-2. install the [Helldivers 2 SDK](https://github.com/Boxofbiscuits97/HD2SDK-CommunityEdition)
-3. install the addon via edit > preferences > Add-ons > Install from disk (top right)
+    - Automatic installation:
+        1. Press N in 3D view to open the panels tab
+        2. In the "HD2 Visual Edit" group, click the "Install Pillow" button
+        3. Restart blender
+    - Manual installation options:
+        - In the blender scripting tab, in the python repl, paste and run this command: 
+            - `import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "-y", "pillow"]);`
+        - At least one of these cli commands I wrote will also do it: 
+            - `path\to\blender.exe -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow"]);'`
+            - `blender -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow"]);'`
 
 
 ## Setup
@@ -109,5 +116,3 @@ Additionally, an id mask array is created for each merged object. They are named
 I will accept pull requests for anything that can be justified, but these are priorities
 
 - Add more ops so that IDMask import/export can be done from basically anywhere, rather than just via the shader nodes area. `ops/painting.py` has some code for automatically finding the main group that will help with this.
-
-- Better support for installing pillow
