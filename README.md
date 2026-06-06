@@ -22,6 +22,7 @@ This blender addon enables the editing of the IDMask array and pattern mask text
 
 
 ## Setup
+### Accurate Shader
 1. Set up the helldivers 2 accurate shader for your model
     - See [this discord thread](https://discord.com/channels/1210541115829260328/1222290154409033889) for details and a video on how to do this
     - It comes down to exporting the mesh and associated textures. Specifically, the IDMask, Pattern mask, and LUTs
@@ -34,31 +35,59 @@ This blender addon enables the editing of the IDMask array and pattern mask text
     3. Select the IDMask array dds you exported from helldivers.
         - You do not need to pre-process this file at all. Directly exported via the sdk or filediver should be fine. IDMasks exported using this addon should also work.
 
-> [!WARNING]
-> Once you modify the shader in step 2, then the original script that is used to "update" it will PROBABLY not work anymore. It's most likely to just shred it. Just re-creating it is probably best.
-
 When these docs mention "The main group" or "The main node", they mean this one on the right
 ![main node](README_assets/main_node.png)
 
-## Usage
-### Pattern Mask Painting
-#### General painting
-The addon adds a toolbar accessible by pressing N in the 3d viewer in texture paint mode which allows quickly switching between materials being painted. If a material was not set up for painting, then these buttons will not be clickable. Hover over them to see why.
+> [!WARNING]
+> Once you modify the shader in step 2, then the original script that is used to "update" it will PROBABLY not work anymore. It's most likely to just shred it. Just re-creating it is probably best.
 
-This addon makes painting the IDMask easier, but you do still need to know how the materials interact when layered. Luckily, you will always know what the outcome will look like as you paint.
+### Debug Material
+![main node](README_assets/debug_material_example.png)  
+The accurate shader can be tedious to set up, especially for custom works, so a debug material is available. This lets you paint the IDMask directly onto a model without needing to worry about setting LUTs or other textures
+1. Right click the object you want to edit an ID Mask on
+2. Select "Create IDMask"
+    - In the bottom left, you can change the mask dimensions. This cannot be adjusted later, unless you import a mask with different dimensions.
+3. If you have an existing IDMask file you would like to edit, right click the object again and click "Apply IDMask to Debug Material"
+    - Right now, you need to set the pattern mask manually if you're editing. Go into the shader, and set the bottom-most texture node (connected to the "Pattern mask" debug shader group) to your external pattern mask.
+
+> [!NOTE] 
+> I recommend that you always export the IDMask whenever you're done working, even if you plan to revisit it later. The intermediate textures created and used by the plugin are easy to get mixed up, and can disappear into temporary directories if they are unpacked.
+    
+> [!WARNING]
+> Using image dimensions that are not powers of 2 (512, 1024, 2048, etc) will crash the game when loaded. This is a general limitation of helldivers textures.
+
+## Usage
+### ID Mask Painting
+#### General painting
+The addon adds a toolbar accessible by pressing N in the 3d viewer in texture paint mode which allows quickly switching between materials being painted. If a material was not set up for painting, then these buttons will not be clickable. Hover over them to see why. IDMask painting is particularly fluid in the material preview rendering mode. 
 ![toolbar](README_assets/toolbar.png)
+
+When painting IDMasks, your brush should be set to either black or white. Switching between layers will set your brush to be black and white in order to enforce this. Colors make no sense in this context and will cause problems down the line. This can be unintuitive, especially in the debug material where your all-white strokes will appear colored, but it will make more sense if you think of colors as being strictly for identifying IDMask layers.
+
+This addon makes painting the IDMask easier, but you do still need to know how the materials interact when layered. The accurate shader is very, very accurate (as expected) with this, and the debug shader does a fairly good job of approximating the interaction.
+
+The debug material can alert you to ID Mask painting issues where it is unclear which LUT row should take priority. This can happen when two or more ID Mask layers are set to 1, and thus will clash. (usually the higher-numbered row takes priority) If you see two IDMask colors mixing to create a third color, (Red + Blue combining to make yellow) it means that those masks are equal or set to 1 at that location and should be adjusted.
 
 #### Exporting
 When you're done painting and ready to make a patch or otherwise use the IDMask you just painted, you'll need to export it back to a dds. It is safe to overwrite the original DDS you imported, since this add-on makes no references to it.
 
 ##### Exporting IDMask Array
+For the HD2 accurate shader:
 1. In the shader nodes, select and right click the main group (same thing from the setup)
 2. Click "Export to IDMask Array"
 3. Select your output file. Existing files will be overwritten.
     - This output file can be added to a patch however you'd like
 
+For the debug IDMask material:
+1. In View 3d mode, right-click the object whose mask you want to export
+2. Click "Export IDMask from Debug Material"
+3. Select your output file. Existing files will be overwritten.
+    - This output file can be added to a patch however you'd like
+
 ##### Exporting Pattern Mask
 The pattern mask doesn't need any special treatment. Although there is a button for quickly editing it, there is no special process for exporting it. If you added it as an external file, then the changes will be saved automatically by blender when prompted. Otherwise, you'll need to unpack or directly save the image. Basically, do the inverse of however you originally added it to the accurate shader.
+
+If you are using the debug material for painting, you will need to go into the shader nodes and save the bottom-most image texture node. (The one connected to the pattern mask input)
 
 ### Asset Merging
 Objects using the accurate shader can be merged. This will combine the primary and secondary LUTs of the merged objects, and stack the IDMasks to conform with those new LUTs. This is required because armor primary LUTs are hard-coded. Even when using multiple armor lut materials on a single armor, they are all hard-coded to use the same primary LUT. This merging process produces a valid shared primary LUT and IDMasks that correctly index into it.
@@ -116,3 +145,4 @@ Additionally, an id mask array is created for each merged object. They are named
 I will accept pull requests for anything that can be justified, but these are priorities
 
 - Add more ops so that IDMask import/export can be done from basically anywhere, rather than just via the shader nodes area. `ops/painting.py` has some code for automatically finding the main group that will help with this.
+- better pattern mask support in the debug shader. Right now, the pattern mask needs to be set and saved manually via the nodes, and this isn't really clean.
