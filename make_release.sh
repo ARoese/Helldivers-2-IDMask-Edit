@@ -11,6 +11,7 @@ cd release
 mkdir "IDMask-Edit"
 
 unzip id_mask_release.zip -d "IDMask-Edit"
+rm -f "IDMask-Edit/shader_ex.blend"
 zip "IDMask-Edit-v$VERSION.zip" -r "IDMask-Edit"
 rm -r "IDMask-Edit" id_mask_release.zip
 
