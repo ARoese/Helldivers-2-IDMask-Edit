@@ -144,6 +144,8 @@ If you encounter issues or need help, you can either open an issue on github or 
     1. $`git archive HEAD -o ../IDMask-Edit.zip`
     2. unzip and re-zip the IDMask-Edit zip so that it has a parent folder in the zip
 
+    - Or run `make_release.sh`
+
 ## TODO
 I will accept pull requests for anything that can be justified, but these are priorities
 
