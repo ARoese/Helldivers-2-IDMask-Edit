@@ -24,9 +24,9 @@ This blender addon enables the editing of the IDMask array and pattern mask text
 ## Setup
 ### Accurate Shader
 1. Set up the helldivers 2 accurate shader for your model
-    - See [this discord thread](https://discord.com/channels/1210541115829260328/1222290154409033889) for details and a video on how to do this
+    - By far, the easiest way to do this is by exporting a unit using [filediver](https://github.com/xypwn/filediver). The resulting blender object will have the shader set up for you.
+    - See [this discord thread](https://discord.com/channels/1210541115829260328/1222290154409033889) for details and a video on how to do this manually
     - It comes down to exporting the mesh and associated textures. Specifically, the IDMask, Pattern mask, and LUTs
-    - You need to keep a hold of the IDMask dds file exported from the game. An exr file or PNG will not work for this plugin.
     - You can also append objects from the [helldivers 2 armory](https://discord.com/channels/1210541115829260328/1446534760045482046), which has this set up for each armor set
 2. Modify the shader and import the IDMask dds
     1. in the node view of the shader, select and right click the main node. This will be named something like "HD2 Shader Template"
@@ -34,6 +34,7 @@ This blender addon enables the editing of the IDMask array and pattern mask text
         - Clicking this option again will give you the opportunity to import a different IDMask. The new channels will overwrite the old ones, and the shader will stay clean. This could be useful if you're painting variants.
     3. Select the IDMask array dds you exported from helldivers.
         - You do not need to pre-process this file at all. Directly exported via the sdk or filediver should be fine. IDMasks exported using this addon should also work.
+        - If you don't have the ID mask, but have the accurate shader set up, you can save it from the shader by clicking the IDMask array image texture node, and then saving the linked image.
 
 When these docs mention "The main group" or "The main node", they mean this one on the right
 ![main node](README_assets/main_node.png)
