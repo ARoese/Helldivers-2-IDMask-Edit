@@ -152,3 +152,4 @@ I will accept pull requests for anything that can be justified, but these are pr
 
 - Add more ops so that IDMask import/export can be done from basically anywhere, rather than just via the shader nodes area. `ops/painting.py` has some code for automatically finding the main group that will help with this.
 - better pattern mask support in the debug shader. Right now, the pattern mask needs to be set and saved manually via the nodes, and this isn't really clean.
+- IDMask import/export that creates a signed distance field according to [this paper](https://steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf) and downscales that to create the actual IDMask. Also support importing from an SDF to a high-resolution binary image that gets edited. Use bilinear interpolation as suggested in the paper. This makes it easier to edit fine details without needing to eyeball the SDF or export unnecessarily high resolution ID masks.
