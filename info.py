@@ -1,7 +1,7 @@
 bl_info = {
     "name": "HD2 LUT Visual Edit",
     "blender": (4, 3, 0),
-    "version": (1, 4, 0),
+    "version": (1, 4, 1),
     "category": "Material",
 }
 

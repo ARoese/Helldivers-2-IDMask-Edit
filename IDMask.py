@@ -144,7 +144,14 @@ def from_strip_path(src: Path, expect_2_layers: bool = False) -> PackedChannels:
 
     x, y = img.size
     if expect_2_layers and y != 2*x:
-        img = img.resize((x, 2*x))
+        # These images need to be resized independently, because the resize function 
+        # internally does alpha premultiplication when an alpha channel is present. This destroys 
+        # image data for us, so it needs to be avoided.
+        print("resizing image because expect_2_layers")
+        R, G, B, A = map(lambda c: c.resize((x, 2*x)), img.split())
+        scaled = Image.merge("RGBA", [R,G,B,A])
+
+        img = scaled
 
     return from_strip(img)
 

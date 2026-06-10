@@ -139,8 +139,6 @@ class ComplexMergeNoAtlas(bpy.types.Operator):
         pieces = [ps for obj in objects if (ps := get_pieces(obj)) is not None]
         assert len(pieces) == len(objects)
 
-        max_idmask_dim = max(piece[1].dim()[0] for piece in pieces)
-        max_idmask_dim = (max_idmask_dim, max_idmask_dim)
         lut_stack = pieces[0][3].clone() # start with the primary object's LUT
         secondary_lut_stack = pieces[0][4].clone() # start with the primary object's LUT
         global_pattern_lut = None
@@ -170,7 +168,7 @@ class ComplexMergeNoAtlas(bpy.types.Operator):
 
             print(f"Creating lut material for {obj.name}")
 
-            extended_id_mask = IDMask.empty_channel_pack(depth=(idx+1)*8, dim=max_idmask_dim)
+            extended_id_mask = IDMask.empty_channel_pack(depth=(idx+1)*8, dim=id_mask.dim())
             extended_id_mask.paste(id_mask, depth=idx*8)
 
             id_mask_path = output_dir / f"{obj.name}-idmask.dds"
