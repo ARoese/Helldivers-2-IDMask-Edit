@@ -6,10 +6,12 @@ This blender addon enables the editing of the IDMask array and pattern mask text
 
 ## Installation
 1. install the [Helldivers 2 SDK](https://github.com/Boxofbiscuits97/HD2SDK-CommunityEdition)
-2. install the addon via edit > preferences > Add-ons > Install from disk (top right)
-3. install the PIL (python library)
+2. download and install the [lastest release](https://github.com/ARoese/Helldivers-2-IDMask-Edit/releases) of the addon
+    - Get the top-most zip file with the version in the name, NOT the respository zip
+    - install via edit > preferences > Add-ons > Install from disk (top right)
+3. install pillow (python library)
     - Some other add-on probably already installed it. If you use Material Combiner, then that did it for you.
-    - Automatic installation:
+    - **Automatic installation:**
         1. Press N in 3D view to open the panels tab
         2. In the "HD2 Visual Edit" group, click the "Install Pillow" button
         3. Restart blender
