@@ -113,6 +113,9 @@ The secondary LUTs aren't useful, but they are merged anyways in case more is le
 4. Select output folder
     - The resultant object will appear black in material preview mode from this point forward. Trust the process.
 
+> [!WARNING]
+> After the merge is complete, you will not be able to edit the IDMasks and LUTs of the result using this plugin. If you make copies of the objects and merge the copies, I have seen the merge operation still end up breaking the originals because of changes to the underlying texture assets. I personally only merge as part of making a patch, and don't save the blend afterwards. Merging is quick to do, but somewhat destructive.
+
 An SDK-compatible armor LUT material is created for each object, and the objects are merged into one. The relevant inputs are also wired up automatically. The resultant object is ready to be added to the patch.
 
 2 files are placed into the selected output folder, where OBJECT_NAME is the name of the active object:
