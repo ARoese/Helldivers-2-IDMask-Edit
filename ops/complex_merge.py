@@ -213,7 +213,7 @@ class ComplexMerge(bpy.types.Operator):
             scaled_normal_size = tuple(dim*nmsf for dim in id_mask.dim()) # using id mask here is not a mistake
             #print("scaled normal size: ", scaled_normal_size)
             #print("normal atlas dim:", normal_map_atlas.size)
-            scaled_normal = normal.resize(scaled_normal_size)
+            scaled_normal = normal.resize(scaled_normal_size) # type: ignore
             normal_corner = tuple(coord*nmsf for coord in placement.top_left())
             assert len(normal_corner) == 2
             normal_map_atlas.paste(scaled_normal, normal_corner)
@@ -245,7 +245,7 @@ class ComplexMerge(bpy.types.Operator):
         ao = context.active_object
         so = context.selected_objects
 
-        if ao is None or not so:
+        if ao is None or len(so) < 2:
             cls.poll_message_set("Multiple objects must be selected")
             return False
 

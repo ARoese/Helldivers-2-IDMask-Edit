@@ -24,39 +24,44 @@ This blender addon enables the editing of the IDMask array and pattern mask text
 
 ## Setup
 ### Accurate Shader
+| Solid Shading Mode | Material Preview Shading Mode |
+| ------------------ | ----------------------------- |
+| ![main node](README_assets/accurate_shader_paint_solid.png)   | ![main node](README_assets/accurate_shader_paint_material_preview.png) |
+
 1. Set up the helldivers 2 accurate shader for your model
     - By far, the easiest way to do this is by exporting a unit using [filediver](https://github.com/xypwn/filediver). The resulting blender object will have the shader set up for you.
     - See [this discord thread](https://discord.com/channels/1210541115829260328/1222290154409033889) for details and a video on how to do this manually
     - It comes down to exporting the mesh and associated textures. Specifically, the IDMask, Pattern mask, and LUTs
     - You can also append objects from the [helldivers 2 armory](https://discord.com/channels/1210541115829260328/1446534760045482046), which has this set up for each armor set
-2. Modify the shader and import the IDMask dds
-    1. in the node view of the shader, select and right click the main node. This will be named something like "HD2 Shader Template"
-    2. Click the "Make Editable" option in the context menu.
+2. Import the IDMask dds
+    1. Right click your object
+    2. Click the "Import IDMask" option in the context menu.
         - Clicking this option again will give you the opportunity to import a different IDMask. The new channels will overwrite the old ones, and the shader will stay clean. This could be useful if you're painting variants.
-    3. Select the IDMask array dds you exported from helldivers.
-        - You do not need to pre-process this file at all. Directly exported via the sdk or filediver should be fine. IDMasks exported using this addon should also work.
+    3. Select the IDMask array exported from helldivers.
+        - You do not need to pre-process this file at all. A dds directly exported via the sdk or filediver should be fine. IDMasks exported using this addon should also work.
+        - If your texture is an SDF, (it probably is) make sure the "Is SDF" box is checked and the resolution is set high enough for your desired detail. Otherwise, the mask will be blurry. See [What is an SDF](#what-is-an-sdf) for more information on this.
+        - A png strip will also work for this.
         - If you don't have the ID mask, but have the accurate shader set up, you can save it from the shader by clicking the IDMask array image texture node, and then saving the linked image.
 
-When these docs mention "The main group" or "The main node", they mean this one on the right
-![main node](README_assets/main_node.png)
-
 > [!WARNING]
-> Once you modify the shader in step 2, then the original script that is used to "update" it will PROBABLY not work anymore. It's most likely to just shred it. Just re-creating it is probably best.
+> Once you import the shader in step 2, the accurate shader node graph is modified. The original script that is used to "update" or set up the accurate shader will PROBABLY not work anymore. It's most likely to just shred the node graph. If you want to change something that requires the use of this update script, you should export your IDMask and re-create the accurate shader. If you need to update the LUT because you modified it, you can do this by clicking the "Primary Material LUT Texture" shader node to open the linked image in the image viewer, then in the hamburger menu in the top left of the image viewer use `Image > Replace` or `Image > Reload`
 
 ### Debug Material
 ![main node](README_assets/debug_material_example.png)  
 The accurate shader can be tedious to set up, especially for custom works, so a debug material is available. This lets you paint the IDMask directly onto a model without needing to worry about setting LUTs or other textures
 1. Right click the object you want to edit an ID Mask on
-2. Select "Create IDMask"
+2. Select "Create Debug IDMask"
     - In the bottom left, you can change the mask dimensions. This cannot be adjusted later, unless you import a mask with different dimensions.
+    - if you are doing step 3, ignore this value. It will be overwritten by the incoming IDMask.
 3. If you have an existing IDMask file you would like to edit, right click the object again and click "Apply IDMask to Debug Material"
+    - If your texture is an SDF, (it probably is) make sure the "Is SDF" box is checked and the resolution is set high enough for your desired detail. Otherwise, the mask will be blurry. See [What is an SDF](#what-is-an-sdf) for more information on this.
     - Right now, you need to set the pattern mask manually if you're editing. Go into the shader, and set the bottom-most texture node (connected to the "Pattern mask" debug shader group) to your external pattern mask.
 
 > [!NOTE] 
 > I recommend that you always export the IDMask whenever you're done working, even if you plan to revisit it later. The intermediate textures created and used by the plugin are easy to get mixed up, and can disappear into temporary directories if they are unpacked.
     
 > [!WARNING]
-> Using image dimensions that are not powers of 2 (512, 1024, 2048, etc) will crash the game when loaded. This is a general limitation of helldivers textures.
+> Using image dimensions that are not powers of 2 (512, 1024, 2048, etc) will crash the game when loaded. This is a general limitation of helldivers textures, but this addon will give you the footgun to allow for special cases.
 
 ## Usage
 ### ID Mask Painting
@@ -71,20 +76,17 @@ This addon makes painting the IDMask easier, but you do still need to know how t
 The debug material can alert you to ID Mask painting issues where it is unclear which LUT row should take priority. This can happen when two or more ID Mask layers are set to 1, and thus will clash. (usually the higher-numbered row takes priority) If you see two IDMask colors mixing to create a third color, (Red + Blue combining to make yellow) it means that those masks are equal or set to 1 at that location and should be adjusted.
 
 #### Exporting
-When you're done painting and ready to make a patch or otherwise use the IDMask you just painted, you'll need to export it back to a dds. It is safe to overwrite the original DDS you imported, since this add-on makes no references to it.
+When you're done painting and ready to make a patch or otherwise use the IDMask you just painted, you'll need to export it back to a dds. It is safe to overwrite the original DDS you imported, since this add-on makes no references to it. See [What is an SDF](#what-is-an-sdf) for proper SDF-vs-binary hygeine. Generally, you should keep and edit a high-resolution array, then export that to a lower resolution SDF that you put in the patch.
+
+> [!WARNING]
+> Using image dimensions that are not powers of 2 (512, 1024, 2048, etc) will crash the game when loaded. This is a general limitation of helldivers textures, but this addon will give you the footgun to allow for special cases.
 
 ##### Exporting IDMask Array
-For the HD2 accurate shader:
-1. In the shader nodes, select and right click the main group (same thing from the setup)
-2. Click "Export to IDMask Array"
-3. Select your output file. Existing files will be overwritten.
+1. Right click your object in object mode
+2. Click "Export IDMask to Array"
+3. Set your output file. It must be a DDS. Existing files will be overwritten.
     - This output file can be added to a patch however you'd like
-
-For the debug IDMask material:
-1. In View 3d mode, right-click the object whose mask you want to export
-2. Click "Export IDMask from Debug Material"
-3. Select your output file. Existing files will be overwritten.
-    - This output file can be added to a patch however you'd like
+    - see [What is an SDF](#what-is-an-sdf) for information on the "as SDF" option. You want to use this!
 
 ##### Exporting Pattern Mask
 The pattern mask doesn't need any special treatment. Although there is a button for quickly editing it, there is no special process for exporting it. If you added it as an external file, then the changes will be saved automatically by blender when prompted. Otherwise, you'll need to unpack or directly save the image. Basically, do the inverse of however you originally added it to the accurate shader.
@@ -94,9 +96,16 @@ If you are using the debug material for painting, you will need to go into the s
 ##### What is an SDF?
 When importing and exporting IDMask arrays, you can find "is SDF?" and "as SDF" checkboxes. You should look at the pretty pictures in [this whitepaper by valve](https://steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf) to see why SDFs are used in HD2 and what problem they solve. I also reference it in this explanation.
 
-HD2 always interprets the mask textures it loads as Signed Distance Fields, (SDFs) no matter what you give it. Almost all IDMasks you get from the game are SDFs. When you are painting ID masks, you generally want to be painting a binary mask where white = paint material, and black = don't paint material, for it to be intuitive. This binary mask you paint is an acceptable degenerate case of an SDF, which is why it's fine to export it directly as a high resolution SDF. Your mask needs to be high resolution to get good detail on your model, but these high resolution textures are very resource and memory heavy. If you just naively downscale the mask, though, you start getting wiggly artifacts on non-axis-aligned edges like in Figure 1(b) (center image at the top). If you instead convert the image to an SDF, then the result is much more well-behaved when downscaled and upscaled. As an oversimplification, conversion to an SDF takes information about the edges of shapes that would normally be lost, and spreads it out across surrounding pixels so that it can be reconstructed later. The only remaining artifacts are then sharp corners getting rounded off. 
+HD2 always interprets the mask textures it loads as Signed Distance Fields, (SDFs) no matter what you give it. Almost all IDMasks you get from the game are SDFs. When you are painting ID masks, you generally want to be painting a binary mask where white = paint material, and black = don't paint material, for it to be intuitive. This binary mask you paint is an acceptable degenerate case of an SDF, which is why it's fine to export it directly as a high resolution SDF. Your mask needs to be high resolution to get good detail on your model, but these high resolution textures are very resource and memory heavy. If you just naively downscale the mask, though, you start getting wiggly artifacts on non-axis-aligned edges like in Figure 1(b) (center image at the top) of the whitepaper. If you instead convert the image to an SDF, then the result is much more well-behaved when downscaled and upscaled. As an oversimplification, conversion to an SDF takes information about the edges of shapes that would normally be lost, and spreads it out across surrounding pixels so that it can be reconstructed later. The only remaining artifacts are then sharp corners getting rounded off. 
 
-TL;DR: SDFs look blurry, non-SDFs (binary masks) look sharp. An SDF is a low-resolution blurry image that technomagically represents a higher-resolution image with clean, sharp edges. You should paint high resolution binary masks and export to a lower resolution SDF when you make your mod. Masks exported from the game are almost always SDFs, and if you tell this plugin that a mask you're giving it is an SDF, it can allow you to edit or view it intuitively at the higher resolution. When you export a mask, you can convert it into an SDF and downscale it with minimal detail loss.
+**TL;DR:** 
+- SDFs look blurry, non-SDFs (binary masks) look sharp. 
+- Masks exported from the game are almost always SDFs
+- You should paint high resolution binary masks and export to a lower resolution SDF when you make your patch. 
+- An SDF is a low-resolution blurry image that technomagically represents a higher-resolution binary mask image with clean, sharp edges. 
+- If you tell this addon that a mask you're giving it is an SDF, it can convert it to a higher resolution sharp version that is nice to edit. 
+- When you export a mask, you can convert it into a downscaled SDF with minimal detail loss. 
+- A mask with sharper corners needs a higher resolution SDF to represent them. Smooth, predictable edges lend themselves to lower SDF resolutions.
 
 > [!WARNING]
 > Conversion to and from an SDF is not lossless. You should always retain a high-resolution version of the mask, and export a low resolution SDF that you add to a patch.
@@ -143,12 +152,16 @@ Additionally, an id mask array is created for each merged object. They are named
 > 
 > If you want your result to be visually consistent with other LUT edit mods, then you need to use the primary LUT contained in that mod when merging here instead of the LUT from the base game. I recommend distributing these as alternative "options" in your mod, should you choose to create them.
 
+## Q/A
+Q: I imported an IDMask and it's blurry! How do I edit this?  
+A: Re-import and check "is SDF" in the file picker dialogue. Also see [What is an SDF?](#what-is-an-sdf)
+
 ## Known Issues
-- If any of the relevant textures is a data block with a broken link, (it is an external or linked image, and that link is broken) then blender will hang and just eat ram. This can happen sometimes when using arsenal shaders that have been appended from another blend file. If your material looks broken, then merging with it might fail!
+- When performing a merge operation, if any of the relevant textures is a data block with a broken link, (it is an external or linked image, and that link is broken) then blender will hang and just eat ram. This can happen sometimes when using arsenal shaders that have been appended from another blend file. If your material looks broken, then merging with it might fail!
 - Performing the merge operation on copies of objects can break the originals. This obstructs a workflow that involves merging once and just always adding that to the patch while maintaining un-merged copies of the constituent objects in case changes want to be made later. My recommendation is to use asset merging as a step of making your patch, which will be intentionally not saved.
 
 ## Reporting Issues
-If you encounter issues or need help, you can either open an issue on github or contact me (@DrLong) in the [Helldivers 2 Modding Community discord server](https://discord.gg/ZwjPaZNwH7).
+If you encounter issues or need help, you can either open an issue on github or contact me (@DrLong) in the [Helldivers 2 Modding Community discord server](https://discord.gg/ZwjPaZNwH7). Make sure you ping me, because I probably won't see it otherwise.
 
 ## Other Notes
 - This add-on is platform-independent. I develop on linux, but windows is supported. The only platform-dependent stuff is the calls to Texassemble, Texconv, and LUTranslate, and the platform is detected automatically.
@@ -165,5 +178,5 @@ If you encounter issues or need help, you can either open an issue on github or 
 ## TODO
 I will accept pull requests for anything that can be justified, but these are priorities
 
-- Add more ops so that IDMask import/export can be done from basically anywhere, rather than just via the shader nodes area. `ops/painting.py` has some code for automatically finding the main group that will help with this.
+- Import/export pattern mask SDF. This should get its own operators.
 - better pattern mask support in the debug shader. Right now, the pattern mask needs to be set and saved manually via the nodes, and this isn't really clean.

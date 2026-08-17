@@ -206,4 +206,14 @@ def find_main_group(obj: bpy.types.Object) -> AccurateShaderMainGroup | None:
                 continue
             if isinstance(node, bpy.types.ShaderNodeGroup) and is_main_node_group(node):
                 return AccurateShaderMainGroup(node)
+
+def from_material(mat: bpy.types.Material, fail_reason: Callable[[str], None] = _throw_away) -> AccurateShaderMainGroup | None:
+    if not mat.use_nodes or mat.node_tree is None:
+        return None
+
+    for node in mat.node_tree.nodes:
+        if node is None:
+            continue
+        if isinstance(node, bpy.types.ShaderNodeGroup) and is_main_node_group(node, fail_reason):
+            return AccurateShaderMainGroup(node)
             

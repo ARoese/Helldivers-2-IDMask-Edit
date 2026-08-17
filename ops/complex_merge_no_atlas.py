@@ -198,7 +198,7 @@ class ComplexMergeNoAtlas(bpy.types.Operator):
         ao = context.active_object
         so = context.selected_objects
 
-        if ao is None or not so:
+        if ao is None or len(so) < 2:
             cls.poll_message_set("Multiple objects must be selected")
             return False
 
