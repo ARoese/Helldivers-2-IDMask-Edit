@@ -50,7 +50,7 @@ class IDMaskDebugMaterial:
         group = nt.nodes[group]
         assert isinstance(group, bpy.types.ShaderNodeGroup)
         if "debug idmask" not in group.node_tree.name: #type: ignore
-            print(f"'debug idmask' not in '{group.node_tree.name}'") #type: ignore
+            #print(f"'debug idmask' not in '{group.node_tree.name}'") #type: ignore
             return False
         
         return True

@@ -181,4 +181,4 @@ If you encounter issues or need help, you can either open an issue on github or 
 ## TODO
 I will accept pull requests for anything that can be justified, but these are priorities
 
-- SDF support in complex merge operation. This should be deceptively simple to add.
+- Clean up code. Currently, I can't think of any features or QOL tweaks to add

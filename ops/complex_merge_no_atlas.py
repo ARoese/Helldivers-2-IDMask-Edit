@@ -15,6 +15,8 @@ from ..utils import IDMask
 from ..utils.IDMask import PackedChannels as PackedChannelsType
 from ..utils import LUT
 from ..utils.LUT import LUT as LUTType
+from ..utils import sdf_mask
+from .utils import images as image_utils
 
 
 AtlasPieces = Tuple[bpy.types.Object, PackedChannelsType, Image | None, LUTType, LUTType, Image, Image | None, Image | None]
@@ -37,9 +39,21 @@ class ComplexMergeNoAtlas(bpy.types.Operator):
         options={'HIDDEN'}
     ) #type: ignore
 
+    to_sdf: bpy.props.BoolProperty(default=False, name="as SDF", description="Export to a SDF at a lower resolution. See the README to understand what this means.") #type: ignore
+    sdf_downscale_target: bpy.props.IntProperty(name="SDF resolution", default=256, min=32, description="The resolution of the exported SDF.") #type: ignore
+
+    def draw(self, context):
+        layout = self.layout
+        assert layout is not None
+
+        layout.label(text="Select a directory to export the merge assets to", icon='INFO')
+        
+        layout.prop(self, "to_sdf")
+        if self.to_sdf:
+            layout.prop(self, "sdf_downscale_target")
+
     def invoke(self, context: Context, event: Event) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
         assert context.window_manager is not None
-        context.window_manager.fileselect_add
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
     
@@ -100,19 +114,20 @@ class ComplexMergeNoAtlas(bpy.types.Operator):
             primary_lut = lut_from_blender_image(primary_lut_node.image)
             secondary_lut = lut_from_blender_image(secondary_lut_node.image)
             print("done Loading LUTs")
-
-            idmd = id_mask.dim()
-            if idmd[0] != idmd[1]:
-                raise ValueError("id mask is not square. It cannot be atlased.")
             
             normal = normal_node.image
-            if normal.size[0] != normal.size[1]:
-                raise ValueError("normal is not square. It cannot be atlased.")
             
             if pattern_mask_node is not None and pattern_mask_node.image is not None:
                 pattern_mask = pattern_mask_node.image
             else:
                 pattern_mask = None
+
+            if self.to_sdf and pattern_mask is not None:
+                pm_pil = image_utils.pillow_image_from_blender_image(pattern_mask)
+                pm_sdf = sdf_mask.channel_into_sdf(pm_pil).resize((self.sdf_downscale_target, self.sdf_downscale_target))
+                pattern_mask = image_utils.blender_image_from_pillow_image(pm_sdf, name=f"{obj.name}-cm-pattern-mask")
+                pattern_mask.name = "complex merge pattern mask"
+                pattern_mask.pack()
             
             def ensure_unpacked(img: Image|None):
                 if img is None:
@@ -171,7 +186,16 @@ class ComplexMergeNoAtlas(bpy.types.Operator):
             extended_id_mask = IDMask.empty_channel_pack(depth=(idx+1)*8, dim=id_mask.dim())
             extended_id_mask.paste(id_mask, depth=idx*8)
 
+            if self.to_sdf:
+                extended_id_mask = extended_id_mask.downscale_sdf((self.sdf_downscale_target, self.sdf_downscale_target))
+
             id_mask_path = output_dir / f"{obj.name}-idmask.dds"
+            with open(id_mask_path, 'wb') as out_file:
+                out_file.write(extended_id_mask.to_array().getbuffer())
+
+            pattern_mask_path = output_dir / f"{obj.name}-patternmask.png"
+            if pattern_mask is not None:
+                pattern_mask.save(filepath=pattern_mask_path.as_posix())
             with open(id_mask_path, 'wb') as out_file:
                 out_file.write(extended_id_mask.to_array().getbuffer())
 

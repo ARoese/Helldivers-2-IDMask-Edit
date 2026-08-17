@@ -61,11 +61,11 @@ def load_blender_mask_image_from_path(path: Path) -> bpy.types.Image:
     im.colorspace_settings.name = "Non-Color" #type: ignore
     return im
 
-def blender_image_from_pillow_image(image: PILImageType) -> bpy.types.Image:
+def blender_image_from_pillow_image(image: PILImageType, name: str = "image") -> bpy.types.Image:
     td = mkdtemp()
     if True: 
         td_path = Path(td)
-        image_path = td_path / "image.png"
+        image_path = td_path / f"{name}.png"
         image.save(image_path.as_posix())
 
         return load_blender_mask_image_from_path(image_path)
