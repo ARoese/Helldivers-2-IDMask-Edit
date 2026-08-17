@@ -1,7 +1,7 @@
 from typing import Annotated, List, Literal, Tuple
 import bpy
 
-from .ops.import_export import ImportIDMaskOperator, ExportToArrayOperator, AddIDMask
+from .ops.import_export import ImportIDMaskOperator, ExportToArrayOperator, ImportPatternMaskOperator, ExportPatternMaskOperator, AddIDMask
 from .ops.painting import PaintMaterial, MaterialSwitcherPanel
 from .ops.complex_merge_no_atlas import ComplexMergeNoAtlas
 
@@ -13,11 +13,13 @@ def draw_object_func(self: bpy.types.Menu, context):
     layout.label(text="HD2 IDMask Edit")
     layout.operator(AddIDMask.bl_idname, text="Create Debug IDMask")
     layout.operator(ImportIDMaskOperator.bl_idname, text="Import IDMask")
+    layout.operator(ImportPatternMaskOperator.bl_idname, text="Import Pattern Mask")
     layout.operator(ExportToArrayOperator.bl_idname, text="Export IDMask to Array")
+    layout.operator(ExportPatternMaskOperator.bl_idname, text="Export Pattern Mask")
     layout.separator(type="LINE")
     layout.operator(ComplexMergeNoAtlas.bl_idname, text="Merge Assets")
 
-CLASSES = [ImportIDMaskOperator, ExportToArrayOperator, PaintMaterial, MaterialSwitcherPanel, ComplexMergeNoAtlas, AddIDMask]
+CLASSES = [ImportIDMaskOperator, ExportToArrayOperator, ImportPatternMaskOperator, ExportPatternMaskOperator, PaintMaterial, MaterialSwitcherPanel, ComplexMergeNoAtlas, AddIDMask]
 
 def register():
     print("registered visual edit addon")

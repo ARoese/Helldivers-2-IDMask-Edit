@@ -53,6 +53,23 @@ def lut_from_blender_image(image: Image) -> LUTType:
     
     return LUT.from_rows(rows)
 
+def load_blender_mask_image_from_path(path: Path) -> bpy.types.Image:
+    im = bpy.data.images.load(path.as_posix(), check_existing=False)
+    im.name = path.stem
+    im.pack()
+    # This is important; Color space transforms on these will really mess up the shader's behavior
+    im.colorspace_settings.name = "Non-Color" #type: ignore
+    return im
+
+def blender_image_from_pillow_image(image: PILImageType) -> bpy.types.Image:
+    td = mkdtemp()
+    if True: 
+        td_path = Path(td)
+        image_path = td_path / "image.png"
+        image.save(image_path.as_posix())
+
+        return load_blender_mask_image_from_path(image_path)
+
 def make_id_mask_images(mask: PackedChannelsType, name: str) -> IDMaskImages:
     td = mkdtemp()
     # placeholder block for a `with TemporaryDirectory as td` statement. 
@@ -60,16 +77,8 @@ def make_id_mask_images(mask: PackedChannelsType, name: str) -> IDMaskImages:
     if True: 
         td_path = Path(td)
         channel_paths = mask.save_channels(td_path, name)
-
-        def load_image(path: Path) -> bpy.types.Image:
-            im = bpy.data.images.load(path.as_posix(), check_existing=False)
-            im.name = path.stem
-            im.pack()
-            # This is important; Color space transforms on these will really mess up the shader's behavior
-            im.colorspace_settings.name = "Non-Color" #type: ignore
-            return im
         
-        images = tuple(load_image(path) for path in channel_paths)
+        images = tuple(load_blender_mask_image_from_path(path) for path in channel_paths)
     
     assert len(images) == 8
     return images

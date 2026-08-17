@@ -42,6 +42,7 @@ This blender addon enables the editing of the IDMask array and pattern mask text
         - If your texture is an SDF, (it probably is) make sure the "Is SDF" box is checked and the resolution is set high enough for your desired detail. Otherwise, the mask will be blurry. See [What is an SDF](#what-is-an-sdf) for more information on this.
         - A png strip will also work for this.
         - If you don't have the ID mask, but have the accurate shader set up, you can save it from the shader by clicking the IDMask array image texture node, and then saving the linked image.
+    4. Repeat for pattern mask
 
 > [!WARNING]
 > Once you import the shader in step 2, the accurate shader node graph is modified. The original script that is used to "update" or set up the accurate shader will PROBABLY not work anymore. It's most likely to just shred the node graph. If you want to change something that requires the use of this update script, you should export your IDMask and re-create the accurate shader. If you need to update the LUT because you modified it, you can do this by clicking the "Primary Material LUT Texture" shader node to open the linked image in the image viewer, then in the hamburger menu in the top left of the image viewer use `Image > Replace` or `Image > Reload`
@@ -55,7 +56,7 @@ The accurate shader can be tedious to set up, especially for custom works, so a 
     - if you are doing step 3, ignore this value. It will be overwritten by the incoming IDMask.
 3. If you have an existing IDMask file you would like to edit, right click the object again and click "Apply IDMask to Debug Material"
     - If your texture is an SDF, (it probably is) make sure the "Is SDF" box is checked and the resolution is set high enough for your desired detail. Otherwise, the mask will be blurry. See [What is an SDF](#what-is-an-sdf) for more information on this.
-    - Right now, you need to set the pattern mask manually if you're editing. Go into the shader, and set the bottom-most texture node (connected to the "Pattern mask" debug shader group) to your external pattern mask.
+4. Repeat for pattern mask
 
 > [!NOTE] 
 > I recommend that you always export the IDMask whenever you're done working, even if you plan to revisit it later. The intermediate textures created and used by the plugin are easy to get mixed up, and can disappear into temporary directories if they are unpacked.
@@ -89,9 +90,11 @@ When you're done painting and ready to make a patch or otherwise use the IDMask 
     - see [What is an SDF](#what-is-an-sdf) for information on the "as SDF" option. You want to use this!
 
 ##### Exporting Pattern Mask
-The pattern mask doesn't need any special treatment. Although there is a button for quickly editing it, there is no special process for exporting it. If you added it as an external file, then the changes will be saved automatically by blender when prompted. Otherwise, you'll need to unpack or directly save the image. Basically, do the inverse of however you originally added it to the accurate shader.
-
-If you are using the debug material for painting, you will need to go into the shader nodes and save the bottom-most image texture node. (The one connected to the pattern mask input)
+1. Right click your object in object mode
+2. Click "Export Pattern Mask"
+3. Set your output file. Existing files will be overwritten.
+    - This output file can be added to a patch however you'd like
+    - see [What is an SDF](#what-is-an-sdf) for information on the "as SDF" option. You want to use this!
 
 ##### What is an SDF?
 When importing and exporting IDMask arrays, you can find "is SDF?" and "as SDF" checkboxes. You should look at the pretty pictures in [this whitepaper by valve](https://steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf) to see why SDFs are used in HD2 and what problem they solve. I also reference it in this explanation.
@@ -178,5 +181,4 @@ If you encounter issues or need help, you can either open an issue on github or 
 ## TODO
 I will accept pull requests for anything that can be justified, but these are priorities
 
-- Import/export pattern mask SDF. This should get its own operators.
-- better pattern mask support in the debug shader. Right now, the pattern mask needs to be set and saved manually via the nodes, and this isn't really clean.
+- SDF support in complex merge operation. This should be deceptively simple to add.

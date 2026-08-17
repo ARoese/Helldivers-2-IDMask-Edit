@@ -13,9 +13,11 @@ from ..utils.IDMask import PackedChannels
 
 from .utils.idmask_debug_material import create_idmask_debug_material
 from .utils.images import IDMaskImages, make_id_mask_images, id_mask_array_from_images
-from ..utils import IDMask
+from ..utils import IDMask, sdf_mask
 
 from .utils.idmask_debug_material import IDMaskDebugMaterial
+
+from PIL import Image as PILImage
 
 class IDMask_Import(bpy.types.Operator):
     '''utility superclass for operations that import an IDMask'''
@@ -315,6 +317,238 @@ class ImportIDMaskOperator(IDMask_Import):
             return False
         
         return True
+
+class ImportPatternMaskOperator(bpy.types.Operator):
+    '''Import a pattern mask from either a PNG or a strip'''
+    bl_idname = "hd2visual.import_pattern_mask"
+    bl_label = "Import pattern mask"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    filepath: bpy.props.StringProperty(name="ID Mask Path", subtype="FILE_PATH") #type: ignore
+    is_sdf: bpy.props.BoolProperty(default=True, name="Is SDF", description="Assume the given mask is an SDF. SDFs have soft, blurry edges. This will allow intuitive fine editing of the imported mask.") #type: ignore
+    sdf_upscale_target: bpy.props.IntProperty(name="Target Resolution", default=1024, min=32, description="The resolution that this mask will be edited at. You can set this very high, as it can be downscaled on export.") #type: ignore
+
+    filter_glob: bpy.props.StringProperty(
+        default="*.png;*.dds",
+        options={'HIDDEN'},
+    ) #type: ignore
+
+    def draw(self, context):
+        layout = self.layout
+        assert layout is not None
+
+        layout.label(text="Select a png or dds to import", icon='INFO')
+        
+        layout.prop(self, "is_sdf")
+        if self.is_sdf:
+            layout.prop(self, "sdf_upscale_target")
+
+    def invoke(self, context: Context, event: Event) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
+        assert context.window_manager is not None
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    def execute_accurate_shader(self, context: Context, pattern_mask_image: bpy.types.Image):
+        ao = context.active_object
+        assert ao is not None
+        am = ao.active_material
+        assert am is not None
+
+        mg = accurate_shader.from_material(am)
+        assert mg is not None
+
+        active_tree = am.node_tree
+        assert active_tree is not None
+
+        pmn = mg.find_pattern_mask_node()
+        assert pmn is not None
+
+        pmn.image = pattern_mask_image
+
+    def execute_debug_material(self, context: Context, pattern_mask_image: bpy.types.Image):
+        ao = context.active_object
+        assert ao is not None
+        am = ao.active_material
+        assert am is not None
+        am = IDMaskDebugMaterial(am)
+
+        am.set_pattern_mask_image(pattern_mask_image)
+
+    def execute(self, context: Context) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
+        ao = context.active_object
+        assert ao is not None
+        am = ao.active_material
+        assert am is not None
+
+        pm_path = Path(self.filepath)
+        if not ".dds" in pm_path.name:
+            pm_image = PILImage.open(pm_path)
+        else:
+            pm_image = IDMask.from_array(pm_path).channels[0]
+
+        if self.is_sdf:
+            pm_image = sdf_mask.sdf_channel_to_straight(pm_image, (self.sdf_upscale_target, self.sdf_upscale_target))
+
+        pm_image = image_util.blender_image_from_pillow_image(pm_image)
+
+        if IDMaskDebugMaterial.is_debug_material(am):
+            self.execute_debug_material(context, pm_image)
+        else:
+            self.execute_accurate_shader(context, pm_image)
+        return {'FINISHED'}
+
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        ao = context.active_object
+        if ao is None or ao.active_material is None:
+            cls.poll_message_set("An editable material must be active")
+            return False
+
+        am = ao.active_material
+        if am.node_tree is None:
+            cls.poll_message_set("Active material node tree is None")
+            return False
+
+        if IDMaskDebugMaterial.is_debug_material(am):
+            return True
+
+        if (mg := accurate_shader.from_material(am, cls.poll_message_set)) is None:
+            return False
+
+        if not mg.is_patched():
+            cls.poll_message_set("Material must be patched before adding a pattern mask")
+            return False
+
+        if mg.find_pattern_mask_node() is None:
+            cls.poll_message_set("Could not find pattern mask node")
+            return False
+        
+        return True
+
+class ExportPatternMaskOperator(bpy.types.Operator):
+    '''Export a pattern mask from either a PNG or a strip'''
+    bl_idname = "hd2visual.export_pattern_mask"
+    bl_label = "Export pattern mask"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    filepath: bpy.props.StringProperty(name="ID Mask Array Path", subtype="FILE_PATH") #type: ignore
+    filter_glob: bpy.props.StringProperty(
+        default="*.png",
+        options={'HIDDEN'},
+    ) #type: ignore
+
+    to_sdf: bpy.props.BoolProperty(default=False, name="as SDF", description="Export to a SDF at a lower resolution. See the README to understand what this means.") #type: ignore
+    sdf_downscale_target: bpy.props.IntProperty(name="SDF resolution", default=256, min=32, description="The resolution of the exported SDF.") #type: ignore
+
+    def draw(self, context):
+        layout = self.layout
+        assert layout is not None
+
+        layout.label(text="Select a png location to export to", icon='INFO')
+        
+        layout.prop(self, "to_sdf")
+        if self.to_sdf:
+            layout.prop(self, "sdf_downscale_target")
+
+    def invoke(self, context: Context, event: Event) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
+        assert context.window_manager is not None
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    @classmethod
+    def accurate_shader_get_pm(cls, context: Context) -> bpy.types.Image | None:
+        ao = context.active_object
+        if ao is None:
+            return None
+        am = ao.active_material
+        if am is None:
+            return None
+
+        mg = accurate_shader.from_material(am)
+        if mg is None:
+            return None
+
+        pmn = mg.find_pattern_mask_node()
+        if pmn is None:
+            return None
+
+        return pmn.image
+
+    @classmethod
+    def debug_material_get_pm(cls, context: Context) -> bpy.types.Image | None:
+        ao = context.active_object
+        if ao is None:
+            return None
+        am = ao.active_material
+        if am is None:
+            return None
+        am = IDMaskDebugMaterial(am)
+
+        return am.get_pattern_mask_image()
+
+    def execute(self, context: Context) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
+        ao = context.active_object
+        assert ao is not None
+        am = ao.active_material
+        assert am is not None
+
+        pm_path = Path(self.filepath)
+        if pm_path.suffix == ".blend":
+            raise Exception("Refusing to overwrite blend file!")
+
+        if IDMaskDebugMaterial.is_debug_material(am):
+            pm = self.debug_material_get_pm(context)
+        else:
+            pm = self.accurate_shader_get_pm(context)
+
+        assert pm is not None
+        pm = image_util.pillow_image_from_blender_image(pm)
+
+        if self.to_sdf:
+            pm = sdf_mask.channel_into_sdf(pm)
+
+        pm.save(pm_path)
+        
+        return {'FINISHED'}
+
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        ao = context.active_object
+        if ao is None or ao.active_material is None:
+            cls.poll_message_set("An editable material must be active")
+            return False
+
+        am = ao.active_material
+        if am.node_tree is None:
+            cls.poll_message_set("Active material node tree is None")
+            return False
+
+        if IDMaskDebugMaterial.is_debug_material(am):
+            pm = cls.debug_material_get_pm(context)
+            if pm is None:
+                cls.poll_message_set("No pattern mask to export")
+                return False
+            return True
+
+        if (mg := accurate_shader.from_material(am, cls.poll_message_set)) is None:
+            return False
+
+        if not mg.is_patched():
+            cls.poll_message_set("Material must be patched before adding a pattern mask")
+            return False
+
+        if mg.find_pattern_mask_node() is None:
+            cls.poll_message_set("Could not find pattern mask node")
+            return False
+
+        if cls.accurate_shader_get_pm(context) is None:
+            cls.poll_message_set("No pattern mask to export")
+            return False
+        
+        return True
+
 
 class AddIDMask(bpy.types.Operator):
     bl_idname = "hd2visual.add_idmask"

@@ -89,6 +89,11 @@ class IDMaskDebugMaterial:
 
         pattern_mask_node.image = pattern_mask
 
+    def get_pattern_mask_image(self) -> bpy.types.Image | None:
+        _, pattern_mask_node = self.get_layer_nodes()
+
+        return pattern_mask_node.image
+
     def make_idmask(self) -> PackedChannels:
         r = self.get_layer_images()
         if r is None:
