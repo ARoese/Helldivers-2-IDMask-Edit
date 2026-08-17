@@ -1,7 +1,7 @@
 from PIL import Image
 from pathlib import Path
 
-import IDMask
+import IDMask as IDMask
 
 TEST_DIR=Path("test")
 ARRAY_STRIP=TEST_DIR / "0xc89b26d36017d6e9.png"

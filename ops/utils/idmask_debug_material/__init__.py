@@ -4,7 +4,7 @@ import typing
 from typing import List, Tuple
 from ..tree import trace_to_textures
 from ..images import IDMaskImages, id_mask_from_blender_channels
-from ....IDMask import PackedChannels
+from ....utils.IDMask import PackedChannels
 
 # This module is created using https://extensions.blender.org/add-ons/node-to-python/
 # don't expect any documentation in there

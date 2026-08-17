@@ -9,18 +9,17 @@ This blender addon enables the editing of the IDMask array and pattern mask text
 2. download and install the [lastest release](https://github.com/ARoese/Helldivers-2-IDMask-Edit/releases) of the addon
     - Get the top-most zip file with the version in the name, NOT the respository zip
     - install via edit > preferences > Add-ons > Install from disk (top right)
-3. install pillow (python library)
-    - Some other add-on probably already installed it. If you use Material Combiner, then that did it for you.
+3. install python libraries
     - **Automatic installation:**
         1. Press N in 3D view to open the panels tab
-        2. In the "HD2 Visual Edit" group, click the "Install Pillow" button
+        2. In the "HD2 Visual Edit" group, click the "Install libs" button
         3. Restart blender
     - Manual installation options:
         - In the blender scripting tab, in the python repl, paste and run this command: 
-            - `import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "-y", "pillow"]);`
+            - `import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "-y", "pillow", "pyopencl]);`
         - At least one of these cli commands I wrote will also do it: 
-            - `path\to\blender.exe -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow"]);'`
-            - `blender -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow"]);'`
+            - `path\to\blender.exe -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow", "pyopencl]);'`
+            - `blender -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow", "pyopencl]);'`
 
 
 ## Setup
@@ -92,6 +91,16 @@ The pattern mask doesn't need any special treatment. Although there is a button 
 
 If you are using the debug material for painting, you will need to go into the shader nodes and save the bottom-most image texture node. (The one connected to the pattern mask input)
 
+##### What is an SDF?
+When importing and exporting IDMask arrays, you can find "is SDF?" and "as SDF" checkboxes. You should look at the pretty pictures in [this whitepaper by valve](https://steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf) to see why SDFs are used in HD2 and what problem they solve. I also reference it in this explanation.
+
+HD2 always interprets the mask textures it loads as Signed Distance Fields, (SDFs) no matter what you give it. Almost all IDMasks you get from the game are SDFs. When you are painting ID masks, you generally want to be painting a binary mask where white = paint material, and black = don't paint material, for it to be intuitive. This binary mask you paint is an acceptable degenerate case of an SDF, which is why it's fine to export it directly as a high resolution SDF. Your mask needs to be high resolution to get good detail on your model, but these high resolution textures are very resource and memory heavy. If you just naively downscale the mask, though, you start getting wiggly artifacts on non-axis-aligned edges like in Figure 1(b) (center image at the top). If you instead convert the image to an SDF, then the result is much more well-behaved when downscaled and upscaled. As an oversimplification, conversion to an SDF takes information about the edges of shapes that would normally be lost, and spreads it out across surrounding pixels so that it can be reconstructed later. The only remaining artifacts are then sharp corners getting rounded off. 
+
+TL;DR: SDFs look blurry, non-SDFs (binary masks) look sharp. An SDF is a low-resolution blurry image that technomagically represents a higher-resolution image with clean, sharp edges. You should paint high resolution binary masks and export to a lower resolution SDF when you make your mod. Masks exported from the game are almost always SDFs, and if you tell this plugin that a mask you're giving it is an SDF, it can allow you to edit or view it intuitively at the higher resolution. When you export a mask, you can convert it into an SDF and downscale it with minimal detail loss.
+
+> [!WARNING]
+> Conversion to and from an SDF is not lossless. You should always retain a high-resolution version of the mask, and export a low resolution SDF that you add to a patch.
+
 ### Asset Merging
 Objects using the accurate shader can be merged. This will combine the primary and secondary LUTs of the merged objects, and stack the IDMasks to conform with those new LUTs. This is required because armor primary LUTs are hard-coded. Even when using multiple armor lut materials on a single armor, they are all hard-coded to use the same primary LUT. This merging process produces a valid shared primary LUT and IDMasks that correctly index into it.
 The secondary LUTs aren't useful, but they are merged anyways in case more is learned about them. These merged objects do **NOT** respect other LUT edit mods, but they will have blood and gunk visible.
@@ -158,4 +167,3 @@ I will accept pull requests for anything that can be justified, but these are pr
 
 - Add more ops so that IDMask import/export can be done from basically anywhere, rather than just via the shader nodes area. `ops/painting.py` has some code for automatically finding the main group that will help with this.
 - better pattern mask support in the debug shader. Right now, the pattern mask needs to be set and saved manually via the nodes, and this isn't really clean.
-- IDMask import/export that creates a signed distance field according to [this paper](https://steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf) and downscales that to create the actual IDMask. Also support importing from an SDF to a high-resolution binary image that gets edited. Use bilinear interpolation as suggested in the paper. This makes it easier to edit fine details without needing to eyeball the SDF or export unnecessarily high resolution ID masks.

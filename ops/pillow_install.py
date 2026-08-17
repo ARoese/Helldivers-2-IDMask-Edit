@@ -5,36 +5,37 @@ import sys, subprocess, textwrap
 from bpy.types import Context
 try:
     import PIL
-    is_pillow_installed=True
+    import pyopencl
+    are_libs_installed=True
 except Exception as e:
-    print(f"Pillow could not be imported with the following error: {e}")
-    is_pillow_installed=False
+    print(f"Libraries could not be imported with the following error: {e}")
+    are_libs_installed=False
 
-_pil_was_just_installed = False
+_just_installed = False
 
-class InstallPillowOperator(bpy.types.Operator):
+class InstallLibsOperator(bpy.types.Operator):
     bl_idname = "hd2visual.install_pillow"
     bl_label = "Install Pillow"
     bl_options = {'REGISTER'}
 
     def execute(self, context: Context) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
-        subprocess.run([sys.executable, "-m", "pip", "install", "pillow"]).check_returncode()
-        global _pil_was_just_installed
-        _pil_was_just_installed=True
+        subprocess.run([sys.executable, "-m", "pip", "install", "pillow", "pyopencl"]).check_returncode()
+        global _just_installed
+        _just_installed=True
         return {'FINISHED'}
     
     @classmethod
     def poll(cls, context: Context) -> bool:
-        if is_pillow_installed or _pil_was_just_installed:
-            cls.poll_message_set("Pillow is already installed")
+        if are_libs_installed or _just_installed:
+            cls.poll_message_set("Libs are already installed")
             return False
         
         return True
 
-class PillowInstallPanel(bpy.types.Panel):
-    """Panel for installing pillow if necessary"""
-    bl_label = "Install Pillow"
-    bl_idname = "UI_PT_InstallPillowPanel"
+class LibsInstallPanel(bpy.types.Panel):
+    """Panel for installing libs if necessary"""
+    bl_label = "Install Libs"
+    bl_idname = "UI_PT_InstallLibsPanel"
     bl_category = "HD2 Visual Edit"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -43,15 +44,15 @@ class PillowInstallPanel(bpy.types.Panel):
         layout = self.layout
         assert layout is not None
 
-        if not is_pillow_installed and not _pil_was_just_installed:
+        if not are_libs_installed and not _just_installed:
             col = layout.column(align=True)
-            lines = textwrap.wrap("The python PIL (pillow) library is required to use this plugin. Click the button below to install it into blender.", width=40)
+            lines = textwrap.wrap("The python PIL (pillow) and pyopencl libraries are required to use this plugin. Click the button below to install them into blender.", width=40)
 
             for line in lines:
                 col.label(text=line)
-            op = col.operator(InstallPillowOperator.bl_idname, text=f"Install pillow")
+            op = col.operator(InstallLibsOperator.bl_idname, text=f"Install Libs")
         else:
-            layout.label(text="Pillow is installed.")
+            layout.label(text="Libs are installed.")
             layout.label(text="Please restart blender.")
         
         

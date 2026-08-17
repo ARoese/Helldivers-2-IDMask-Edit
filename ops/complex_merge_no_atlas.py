@@ -11,10 +11,10 @@ from .utils.images import lut_from_blender_image, ensure_not_unpacked_exr
 from .utils import accurate_shader
 from .utils.custom_types import *
 from .utils.sdk_material_interface import create_sdk_lut_material, setup_sdk_lut_material, poll_create_sdk_lut_material
-from .. import IDMask
-from ..IDMask import PackedChannels as PackedChannelsType
-from .. import LUT
-from ..LUT import LUT as LUTType
+from ..utils import IDMask
+from ..utils.IDMask import PackedChannels as PackedChannelsType
+from ..utils import LUT
+from ..utils.LUT import LUT as LUTType
 
 
 AtlasPieces = Tuple[bpy.types.Object, PackedChannelsType, Image | None, LUTType, LUTType, Image, Image | None, Image | None]

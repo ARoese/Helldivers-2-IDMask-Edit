@@ -7,6 +7,8 @@ import subprocess
 import tempfile
 import itertools
 
+from .sdf_mask import sdf_channel_to_straight, channel_into_sdf
+
 from .itertools_ext import batched
 from . import env
 from .exception import MaskSplitException
@@ -30,6 +32,14 @@ class PackedChannels:
                 channels[i] = l.convert('L')
 
         self.channels = channels
+
+    def upscale_at(self, new_dim: Tuple[int, int]):
+        scaled_channels = [sdf_channel_to_straight(c, new_dim) for c in self.channels]
+        return PackedChannels(scaled_channels)
+
+    def downscale_sdf(self, new_dim: Tuple[int, int]):
+        scaled_channels = [channel_into_sdf(c).resize(new_dim) for c in self.channels]
+        return PackedChannels(scaled_channels)
     
     def dim(self) -> Tuple[int, int]:
         return self.channels[0].size
@@ -220,3 +230,12 @@ def from_channels_dir(root_dir: Path, name: str | None = None) -> PackedChannels
     pack = PackedChannels(channels)
     
     return pack
+
+def from_file(path: Path) -> PackedChannels:
+    '''Create a PackedChannels object, automatically detecting the source type'''
+    if path.suffix == ".dds":
+        mask = from_array(path)
+    else: # assume any other image type is a strip
+        mask = from_strip_path(path)
+
+    return mask

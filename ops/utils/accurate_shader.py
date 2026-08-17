@@ -5,7 +5,7 @@ from bpy.types import ShaderNodeGroup
 from ..utils.images import id_mask_from_blender_channels, id_mask_from_blender_strip
 from .custom_types import *
 from .tree import trace_to_textures
-from ...IDMask import PackedChannels as PackedChannelsType
+from ...utils.IDMask import PackedChannels as PackedChannelsType
 
 EXPECTED_NODE_NAME_PART = "HD2 Shader Template"
 

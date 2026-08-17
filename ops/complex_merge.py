@@ -10,12 +10,12 @@ import pprint
 from .utils.images import lut_from_blender_image, pillow_image_from_blender_image, rgba_pillow_image_from_blender_image
 from .utils import accurate_shader
 from .utils.custom_types import *
-from .. import IDMask
-from ..IDMask import PackedChannels as PackedChannelsType
-from .. import LUT
-from ..LUT import LUT as LUTType
-from .. import square_packing
-from ..square_packing import Square
+from ..utils import IDMask
+from ..utils.IDMask import PackedChannels as PackedChannelsType
+from ..utils import LUT
+from ..utils.LUT import LUT as LUTType
+from ..utils import square_packing
+from ..utils.square_packing import Square
 
 def uv_scale_translate(layer: bpy.types.MeshUVLoopLayer, scale: float, translate: Tuple[float, float], wrap_range=True):
     out_of_range = 0

@@ -9,14 +9,14 @@ from PIL import Image as PILImage
 from PIL.Image import Image as PILImageType
 
 from .custom_types import *
-from ... import IDMask
-from ...IDMask import PackedChannels as PackedChannelsType
-from ... import LUT
-from ...LUT import LUT as LUTType
+from ...utils import IDMask
+from ...utils.IDMask import PackedChannels as PackedChannelsType
+from ...utils import LUT
+from ...utils.LUT import LUT as LUTType
 
-from ...itertools_ext import batched
+from ...utils.itertools_ext import batched
 import subprocess
-from ... import env
+from ...utils import env
 
 def ensure_not_unpacked_exr(img: Image):
     if img.packed_file is not None:
@@ -53,14 +53,7 @@ def lut_from_blender_image(image: Image) -> LUTType:
     
     return LUT.from_rows(rows)
 
-def make_id_mask_images(path: Path) -> IDMaskImages:
-    if path.suffix == ".dds":
-        mask = IDMask.from_array(path)
-    else: # assume any other image type is a strip
-        mask = IDMask.from_strip_path(path)
-
-    name = path.stem
-
+def make_id_mask_images(mask: PackedChannelsType, name: str) -> IDMaskImages:
     td = mkdtemp()
     # placeholder block for a `with TemporaryDirectory as td` statement. 
     # This is omitted because I don't want the directories getting cleaned up right now
@@ -81,7 +74,7 @@ def make_id_mask_images(path: Path) -> IDMaskImages:
     assert len(images) == 8
     return images
 
-def save_id_mask_array_from_images(dest_path: Path, images: IDMaskImages):
+def id_mask_array_from_images(images: IDMaskImages) -> PackedChannelsType:
     td = mkdtemp()
     # placeholder block for a `with TemporaryDirectory as td` statement. 
     # This is omitted because I don't want the directories getting cleaned up right now
@@ -95,8 +88,7 @@ def save_id_mask_array_from_images(dest_path: Path, images: IDMaskImages):
 
         id_mask = IDMask.from_channels_dir(td_path)
     
-    with open(dest_path, 'wb') as out_file:
-        out_file.write(id_mask.to_array().getbuffer())
+    return id_mask
 
 def pillow_image_from_blender_image(blend_image: bpy.types.Image) -> PILImageType:
     '''accepts an image with 1, 3, or 4 channels'''

@@ -10,28 +10,12 @@ from .utils import accurate_shader
 from .utils import images as image_util
 from .utils import tree as tree_util
 
-class ExportToArrayOperator(bpy.types.Operator):
+from .utils.idmask_import_export import IDMask_Import, IDMask_Export
+
+class ExportToArrayOperator(IDMask_Export):
     bl_idname = "hd2visual.export_to_array"
     bl_label = "Export to Array"
     bl_options = {'REGISTER'}
-
-    filepath: bpy.props.StringProperty(name="ID Mask Array Path", subtype="FILE_PATH") #type: ignore
-
-    filter_glob: bpy.props.StringProperty(
-        default="*.dds",
-        options={'HIDDEN'},
-    ) #type: ignore
-
-    def draw(self, context):
-        layout = self.layout
-        assert layout is not None
-
-        layout.label(text="Export to a .dds file.", icon='INFO')
-
-    def invoke(self, context: Context, event: Event) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
-        assert context.window_manager is not None
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
 
     def execute(self, context: Context) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
         an = context.active_node
@@ -45,10 +29,6 @@ class ExportToArrayOperator(bpy.types.Operator):
         
         input_texture_nodes = mg.get_idmask_channel_texture_nodes()
         assert input_texture_nodes is not None
-
-        out_path = Path(self.filepath)
-        if out_path.suffix == ".blend":
-            raise Exception("Refusing to overwrite blend file!")
         
         def get_images(nodes: IDMaskImageNodes) -> IDMaskImages:
             images = tuple(node.image for node in nodes if node.image is not None)
@@ -57,7 +37,8 @@ class ExportToArrayOperator(bpy.types.Operator):
         
         images = get_images(input_texture_nodes)
         
-        image_util.save_id_mask_array_from_images(out_path, images)
+        mask = image_util.id_mask_array_from_images(images)
+        self.write_mask(mask)
 
         return {'FINISHED'}
     
@@ -78,23 +59,10 @@ class ExportToArrayOperator(bpy.types.Operator):
             return False
         return True
 
-class MakeEditableOperator(bpy.types.Operator):
+class MakeEditableOperator(IDMask_Import):
     bl_idname = "hd2visual.make_editable"
     bl_label = "Make Editable"
     bl_options = {'REGISTER', 'UNDO'}
-
-    filepath: bpy.props.StringProperty(name="ID Mask Path", subtype="FILE_PATH") #type: ignore
-
-    filter_glob: bpy.props.StringProperty(
-        default="*.png;*.dds",
-        options={'HIDDEN'},
-    ) #type: ignore
-
-    def draw(self, context):
-        layout = self.layout
-        assert layout is not None
-
-        layout.label(text="Select a 2-layer RGBA dds file to import", icon='INFO')
 
     @classmethod
     def _construct_id_mask_input_nodes(cls, tree: bpy.types.ShaderNodeTree, images: IDMaskImages) -> IDMaskSockets:
@@ -149,11 +117,6 @@ class MakeEditableOperator(bpy.types.Operator):
 
         return (*l1, *l2)
 
-    def invoke(self, context: Context, event: Event) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
-        assert context.window_manager is not None
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
-
     def execute(self, context: Context) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
         an = context.active_node
         active_tree = context.space_data.edit_tree #type: ignore
@@ -166,10 +129,10 @@ class MakeEditableOperator(bpy.types.Operator):
         mg = accurate_shader.AccurateShaderMainGroup(an)
 
         #id_mask_array_path = Path("test/14455190118267868905.dds")
-        id_mask_array_path = Path(self.filepath)
+        name, id_mask_array = self.read_picked_mask()
 
         # make the id mask images from the array
-        id_mask_channels = image_util.make_id_mask_images(id_mask_array_path)
+        id_mask_channels = image_util.make_id_mask_images(id_mask_array, name)
 
         # patch up the shader if needed
         if not mg.is_patched():

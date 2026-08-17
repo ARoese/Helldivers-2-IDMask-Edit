@@ -7,10 +7,11 @@ from .utils.custom_types import IDMaskImageNodes
 
 from .utils import accurate_shader
 from .utils.idmask_debug_material import create_idmask_debug_material
-from .utils.images import IDMaskImages, make_id_mask_images, save_id_mask_array_from_images
-from .. import IDMask
+from .utils.images import IDMaskImages, make_id_mask_images, id_mask_array_from_images
+from ..utils import IDMask
 
 from .utils.idmask_debug_material import IDMaskDebugMaterial
+from .utils.idmask_import_export import IDMask_Import, IDMask_Export
 class PaintMaterial(bpy.types.Operator):
     bl_idname = "hd2visual.paint_material"
     bl_label = "Material N"
@@ -215,28 +216,10 @@ class AddIDMask(bpy.types.Operator):
         
         return True
 
-class ExportDebugIDMaskToArrayOperator(bpy.types.Operator):
+class ExportDebugIDMaskToArrayOperator(IDMask_Export):
     bl_idname = "hd2visual.export_debug_to_array"
     bl_label = "Export Debug to Array"
     bl_options = {'REGISTER'}
-
-    filepath: bpy.props.StringProperty(name="ID Mask Array Path", subtype="FILE_PATH") #type: ignore
-
-    filter_glob: bpy.props.StringProperty(
-        default="*.dds",
-        options={'HIDDEN'},
-    ) #type: ignore
-
-    def draw(self, context):
-        layout = self.layout
-        assert layout is not None
-
-        layout.label(text="Export to a .dds file.", icon='INFO')
-
-    def invoke(self, context: Context, event: Event) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
-        assert context.window_manager is not None
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
 
     def execute(self, context: Context) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
         ao = context.active_object
@@ -249,11 +232,8 @@ class ExportDebugIDMaskToArrayOperator(bpy.types.Operator):
         assert images is not None
         layer_images, pattern_image = images
 
-        out_path = Path(self.filepath)
-        if out_path.suffix == ".blend":
-            raise Exception("Refusing to overwrite blend file!")
-        
-        save_id_mask_array_from_images(out_path, layer_images)
+        id_mask = id_mask_array_from_images(layer_images)
+        self.write_mask(id_mask)
 
         return {'FINISHED'}
     
@@ -275,28 +255,10 @@ class ExportDebugIDMaskToArrayOperator(bpy.types.Operator):
         
         return True
     
-class EditWithDebugIDMask(bpy.types.Operator):
+class EditWithDebugIDMask(IDMask_Import):
     bl_idname = "hd2visual.edit_with_debug_idmask"
     bl_label = "Edit with debug idmask"
     bl_options = {'REGISTER'}
-
-    filepath: bpy.props.StringProperty(name="ID Mask Array Path", subtype="FILE_PATH") #type: ignore
-
-    filter_glob: bpy.props.StringProperty(
-        default="*.dds",
-        options={'HIDDEN'},
-    ) #type: ignore
-
-    def draw(self, context):
-        layout = self.layout
-        assert layout is not None
-
-        layout.label(text="Export to a .dds file.", icon='INFO')
-
-    def invoke(self, context: Context, event: Event) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
-        assert context.window_manager is not None
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
 
     def execute(self, context: Context) -> set[Literal['RUNNING_MODAL', 'CANCELLED', 'FINISHED', 'PASS_THROUGH', 'INTERFACE']]:
         ao = context.active_object
@@ -305,10 +267,10 @@ class EditWithDebugIDMask(bpy.types.Operator):
         assert am is not None
         am = IDMaskDebugMaterial(am)
 
-        id_mask_array_path = Path(self.filepath)
+        name, id_mask_array = self.read_picked_mask()
 
         # make the id mask images from the array
-        id_mask_channels = make_id_mask_images(id_mask_array_path)
+        id_mask_channels = make_id_mask_images(id_mask_array, name)
         am.set_layer_images(id_mask_channels)
 
         return {'FINISHED'}
