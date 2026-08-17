@@ -16,10 +16,10 @@ This blender addon enables the editing of the IDMask array and pattern mask text
         3. Restart blender
     - Manual installation options:
         - In the blender scripting tab, in the python repl, paste and run this command: 
-            - `import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "-y", "pillow", "pyopencl]);`
+            - `import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "-y", "pillow", "pyopencl"]);`
         - At least one of these cli commands I wrote will also do it: 
-            - `path\to\blender.exe -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow", "pyopencl]);'`
-            - `blender -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow", "pyopencl]);'`
+            - `path\to\blender.exe -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow", "pyopencl"]);'`
+            - `blender -b --python-expr 'import sys, subprocess; subprocess.run([sys.executable, "-m", "pip", "install", "pillow", "pyopencl"]);'`
 
 
 ## Setup
