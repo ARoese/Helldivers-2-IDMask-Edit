@@ -119,6 +119,13 @@ class PackedChannels:
         for o in others:
             self.channels.extend(o.channels)
 
+    def extended(self, others: Iterable[Self]):
+        channels = list(self.channels)
+        for o in others:
+            channels.extend(o.channels)
+
+        return PackedChannels(channels)
+
     def paste(self, other: Self, depth: int = 0, corner: Tuple[int, int] = (0,0)):        
         if other.num_channels() + depth > self.num_channels():
             raise ValueError("Not enough channel depth for this paste.")
@@ -133,11 +140,14 @@ def empty_channel_pack(depth: int, dim: Tuple[int, int]) -> PackedChannels:
 def from_strip(image: ImageClass, n_layers: int | None = None) -> PackedChannels:
     x,y = image.size
 
+    print(f"Image with dims {image.size} preparing to be loaded as IDMask. Explicit n_layers: {n_layers}")
+
     if n_layers is None:
         div = y / x
         num_layers = int(div)
         if x*num_layers != y:
             raise MaskSplitException(f"y dimension is not a clean multiple of x dimension. ({x}x{y})")
+        print(f"inferred n_layers to be {num_layers}")
     else:
         num_layers = n_layers
     
@@ -146,6 +156,8 @@ def from_strip(image: ImageClass, n_layers: int | None = None) -> PackedChannels
     layers = [image.crop((0, layer*y_height, x, (layer+1)*y_height)) for layer in range(num_layers)]
     layers = [layer.split() for layer in layers]
     layers = list(itertools.chain(*layers))
+
+    print(f"Read IDMask with {len(layers)} layers")
     
     return PackedChannels(layers)
 

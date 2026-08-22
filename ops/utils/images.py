@@ -74,13 +74,26 @@ def make_id_mask_images(mask: PackedChannelsType, name: str) -> IDMaskImages:
     td = mkdtemp()
     # placeholder block for a `with TemporaryDirectory as td` statement. 
     # This is omitted because I don't want the directories getting cleaned up right now
+
+    print(f"Converting idmask with {mask.num_channels()} channels to 8 blender images")
+    # expect 8 images. If less, need to know how many less
+    size_diff = mask.num_channels() - 8
+    assert size_diff <= 0
+    size_diff = -size_diff
+
+    # add on extra empty (black) channels to make up the space
+    if size_diff != 0:
+        extra = IDMask.empty_channel_pack(size_diff, mask.dim())
+        mask = mask.extended([extra])
+
     if True: 
         td_path = Path(td)
         channel_paths = mask.save_channels(td_path, name)
         
         images = tuple(load_blender_mask_image_from_path(path) for path in channel_paths)
-    
+
     assert len(images) == 8
+
     return images
 
 def id_mask_array_from_images(images: IDMaskImages) -> PackedChannelsType:
