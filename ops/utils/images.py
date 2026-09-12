@@ -18,6 +18,8 @@ from ...utils.itertools_ext import batched
 import subprocess
 from ...utils import env
 
+# TODO: Some of these functions are quite slow on large images. 4K is about the upper limit of usability. Improve this.
+
 def ensure_not_unpacked_exr(img: Image):
     if img.packed_file is not None:
         raise ValueError(f"Expected packed image. Given image {img.name} was not packed.")

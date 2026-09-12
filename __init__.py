@@ -3,9 +3,13 @@ import bpy
 
 from .ops import pillow_install
 from .ops.pillow_install import LibsInstallPanel, InstallLibsOperator
-from . import info
 
-bl_info = info.bl_info
+bl_info = {
+    "name": "HD2 LUT Visual Edit",
+    "blender": (4, 3, 0),
+    "version": (1, 5, 1),
+    "category": "Material",
+}
 
 #pillow_install.is_pillow_installed = False
 

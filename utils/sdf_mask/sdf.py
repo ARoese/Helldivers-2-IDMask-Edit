@@ -65,16 +65,31 @@ if __name__ == "__main__":
     from .. import IDMask
     from ..env import ADDON_PATH
     from pathlib import Path
-    from PIL import Image
+    from PIL import Image, ImageChops, ImageOps
 
     test_id_mask = IDMask.from_strip(Image.open(Path("test/0xc89b26d36017d6e9.png")))
-    TARGET_MASK = -1
-    test_id_mask.channels[TARGET_MASK].show()
-    straight = sdf_channel_to_straight(test_id_mask.channels[TARGET_MASK], (2048,2048))
-    straight.show()
+    TARGET_MASK = 3
+    original_channel = test_id_mask.channels[TARGET_MASK]
+    #original_channel.show()
+    high_res = sdf_channel_to_straight(original_channel, (2048,2048))
+    #straight.show()
     #profiler = cProfile.Profile()
     #profiler.enable()
-    channel_into_sdf(straight).show()
+    sdf_recode = channel_into_sdf(high_res).resize(original_channel.size)
+    #sdf_recode.show()
+
+    diff = ImageChops.difference(sdf_recode, original_channel)
+    if diff.getbbox():
+        print(diff.getextrema())
+        diff.point(lambda v: v*4).show()
+
+    recode_high_res = sdf_channel_to_straight(sdf_recode, (2048,2048))
+    diff = ImageChops.difference(recode_high_res, high_res)
+    if diff.getbbox():
+        print(diff.getextrema())
+        diff.point(lambda v: v*4).show()
+    #invert_diff.show()
     #profiler.disable()
     #stats = pstats.Stats(profiler).sort_stats('tottime')
     #stats.print_stats(20)  # Limits output to the top 20 slowest functions
+

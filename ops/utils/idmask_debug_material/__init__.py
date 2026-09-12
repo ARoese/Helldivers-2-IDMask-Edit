@@ -6,9 +6,16 @@ from ..tree import trace_to_textures
 from ..images import IDMaskImages, id_mask_from_blender_channels
 from ....utils.IDMask import PackedChannels
 
-# This module is created using https://extensions.blender.org/add-ons/node-to-python/
+
+# These modules were created using https://extensions.blender.org/add-ons/node-to-python/
 # don't expect any documentation in there
-from .idmask_debug_material import shader_nodetree_node_group, onehot_8_1_node_group, debug_idmask_1_node_group
+_blend_major = bpy.app.version[0]
+if _blend_major == 4:
+    from .idmask_debug_material43 import shader_nodetree_node_group, onehot_8_1_node_group, debug_idmask_1_node_group
+elif _blend_major == 5:
+    from .idmask_debug_material52 import shader_nodetree_node_group, onehot_8_1_node_group, debug_idmask_1_node_group
+else:
+    raise ImportError(f"Blender version f{_blend_major}.x is unsupported. Use blender 4.x or 5.x")
 #from .idmask_debug_export import onehot_8_1_node_group, debug_idmask_1_node_group
     
 def _internal_create_idmask_debug_material():
