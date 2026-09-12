@@ -2,7 +2,11 @@
 
 This blender addon enables the editing of the IDMask array and pattern mask texture for advanced LUT-compatible helldivers materials. 
 
-**This add-on is for blender 4.3**. It probably also works on other versions, but that's not guarunteed. 
+## Blender Version Compatability
+This add-on is primarily tested on 4.3
+It also works on 5.2, although testing there is limited.
+
+It probably also works on other versions, but that's not guarunteed. If you have problems on other versions, send me the error message and I will see about fixing it.
 
 ## Installation
 1. install the [Helldivers 2 SDK](https://github.com/Boxofbiscuits97/HD2SDK-CommunityEdition)
