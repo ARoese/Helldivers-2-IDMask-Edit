@@ -506,7 +506,7 @@ class ExportPatternMaskOperator(bpy.types.Operator):
         pm = image_util.pillow_image_from_blender_image(pm)
 
         if self.to_sdf:
-            pm = sdf_mask.channel_into_sdf(pm).resize(self.sdf_downscale_target, self.sdf_downscale_target)
+            pm = sdf_mask.channel_into_sdf(pm).resize((self.sdf_downscale_target, self.sdf_downscale_target))
 
         pm.save(pm_path)
         
@@ -573,7 +573,11 @@ class AddIDMask(bpy.types.Operator):
         debug_material.set_layer_images(ci)
         debug_material.set_pattern_mask_image(pattern_mask_image)
 
-        ao.material_slots[0].material = debug_material.mat
+        if len(ao.material_slots) > 0:
+            ao.material_slots[0].material = debug_material.mat
+        else:
+            assert isinstance(ao.data, bpy.types.Mesh)
+            ao.data.materials.append(debug_material.mat)
             
         return {'FINISHED'}
     
