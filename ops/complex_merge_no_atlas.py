@@ -214,7 +214,8 @@ class ComplexMergeNoAtlas(bpy.types.Operator):
 
             obj.material_slots[0].material = lut_material
 
-        bpy.ops.object.join()
+        # Let the user do this themselves. That way, they can decide what needs to be part of what unit
+        #bpy.ops.object.join()
         return {'FINISHED'}
     
     @classmethod

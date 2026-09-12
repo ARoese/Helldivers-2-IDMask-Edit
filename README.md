@@ -136,19 +136,23 @@ The secondary LUTs aren't useful, but they are merged anyways in case more is le
     (read: the object you will be copying helldiver properties from)
 3. Click "Merge assets" in the context menu
 4. Select output folder
-    - The resultant object will appear black in material preview mode from this point forward. Trust the process.
+    - The resultant objects will appear black in material preview mode from this point forward. Trust the process.
+5. Use ctrl+J to merge the objects into one unit*
+    - You have some decisions to make on how you want to merge the assets into *units* with ctrl+j. See below.
 
 > [!WARNING]
 > After the merge is complete, you will not be able to edit the IDMasks and LUTs of the result using this plugin. If you make copies of the objects and merge the copies, I have seen the merge operation still end up breaking the original objects because of changes to the texture data blocks. I personally only merge as part of making a patch, and don't save the blend afterwards. Merging is quick to do, but somewhat destructive.
 
-An SDK-compatible armor LUT material is created for each object, and the objects are merged into one. The relevant inputs are also wired up automatically. The resultant object is ready to be added to the patch.
+An SDK-compatible armor LUT material is created for each object, with IDMasks that index into the generated shared LUT stack. The relevant inputs are also wired up automatically. 
+
+\* You can merge these objects normally using ctrl+J in order to corral them into one or more units as you see fit. These LUT materials will not conflict with each other when multiple are applied to a single unit. Which objects are grouped together into which unit, or how many units, depends on how you want to make your mod. For example, if you kitbash an LUT ammo bag onto your right shoulder, and one onto your left leg, then all the bags and the limbs need to be merged together all at once to generate the correct LUT offsets. However, you probably don't want a single wonky "left leg right arm bag1 bag2" unit in your patch. Your best option here to to ctrl+j merge the leg and its ammo bag, then ctrl+j merge the arm and its ammo bag separately. This will result in 2 objects (your legs unit and your right arm unit) which both have 2 LUT materials. (1 for the limb, and 1 for the bag) Then, you can save those units individually and they will all still behave as expected when the global armor primary LUT is imposed on them. 
 
 2 files are placed into the selected output folder, where OBJECT_NAME is the name of the active object:
 - `OBJECT_NAME-primary-lut-atlas.dds`: primary lut stack
 - `OBJECT_NAME-secondary-lut-atlas.dds`: secondary lut stack (not useful for you)
 Additionally, an id mask array is created for each merged object. They are named as `OBJECT_NAME-idmask.dds`. The armor LUT materials are automatically wired up using the textures in the accurate shader. Files were automatically converted as necessary.
 
-5. If you are producing an armor, (you probably are) then **also** replace that armor's primary LUT with the LUT atlas (`OBJECT_NAME-primary-lut-atlas.dds`) in the patch, because that is hard-coded.
+6. If you are producing an armor, (you probably are) then **also** replace that armor's primary LUT with the LUT atlas (`OBJECT_NAME-primary-lut-atlas.dds`) in the patch, because that is hard-coded.
     - This overwrites the primary LUT for that entire armor set, and thus will affect other pieces of your armor. If you made sure that your active object selected
     in step 1 would also uses that armor's primary LUT, then the first 8 rows of the primary LUT atlas will be the armor set's entire primary LUT. The result is that 
     "dumb" armor pieces with only 8-channel IDMasks will still use only those rows, and your extra LUT rows are hidden away from them using IDMask channels they lack.
