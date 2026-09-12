@@ -506,7 +506,7 @@ class ExportPatternMaskOperator(bpy.types.Operator):
         pm = image_util.pillow_image_from_blender_image(pm)
 
         if self.to_sdf:
-            pm = sdf_mask.channel_into_sdf(pm)
+            pm = sdf_mask.channel_into_sdf(pm).resize(self.sdf_downscale_target, self.sdf_downscale_target)
 
         pm.save(pm_path)
         
