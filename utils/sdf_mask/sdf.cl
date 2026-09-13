@@ -33,7 +33,7 @@ float distance_to_bound(
         for(int y = 0; y <= max_distance*2; y++) {
             int2 target = (int2)(coordinate.x - max_distance + x, coordinate.y - max_distance + y);
             float dist = distance(convert_int2(coordinate) - target);
-            bool target_in_shape = inside_shape(binary_image, convert_uint(target));
+            bool target_in_shape = inside_shape(binary_image, convert_uint2(target));
             bool target_is_opposite = am_inside ^ target_in_shape;
             if(within_bounds(target, dim) && target_is_opposite ){
                 // this implicitly checks dist < max_distance because we start at max_distance
