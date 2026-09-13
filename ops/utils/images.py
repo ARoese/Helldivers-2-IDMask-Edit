@@ -5,6 +5,7 @@ from bpy.path import abspath, relpath
 from bpy.types import ShaderNodeGroup
 from tempfile import mkdtemp
 from pathlib import Path
+from pathlib import PurePosixPath
 from PIL import Image as PILImage
 from PIL.Image import Image as PILImageType
 
@@ -43,7 +44,7 @@ def ensure_not_unpacked_exr(img: Image):
         raise Exception(f"texconv did not fail, but the file {dds_path.as_posix()} still does not exist")
     
     # do this so that relative/non-relative status is not affected
-    img.filepath_raw = relpath(Path(img.filepath_raw).with_suffix(".dds").as_posix())
+    img.filepath_raw = relpath(PurePosixPath(img.filepath_raw).with_suffix(".dds").as_posix())
     img.name = img.name.replace(".exr", ".dds")
 
 
