@@ -167,9 +167,17 @@ Additionally, an id mask array is created for each merged object. They are named
 Q: I imported an IDMask and it's blurry! How do I edit this?  
 A: Re-import and check "is SDF" in the file picker dialogue. Also see [What is an SDF?](#what-is-an-sdf)
 
+Q: After merging units, one of them
+
 ## Known Issues
 - When performing a merge operation, if any of the relevant textures is a data block with a broken link, (it is an external or linked image, and that link is broken) then blender will hang and just eat ram. This can happen sometimes when using arsenal shaders that have been appended from another blend file. If your material looks broken, then merging with it might fail!
 - Performing the merge operation on copies of objects can break the originals. This obstructs a workflow that involves merging once and just always adding that to the patch while maintaining un-merged copies of the constituent objects in case changes want to be made later. My recommendation is to use asset merging as a step of making your patch, which will be intentionally not saved.
+- Some accurate shader exports contain image files that can't be unpacked, and permanently have empty filepaths. These cause unhelpful `Exception: Could not find file at path: `<sup>[sic]</sup> errors from the SDK when you save a unit after merging. These are often normal maps and pattern mask LUTs. 
+    1. After merging, open the Shading workspace and check each of the resulting materials. 
+    2. Click each texture node in the material to bring up its image in the image editor on the left side. Make sure the side bar in the image editor is expanded. 
+    3. In the `Image` section of the sidebar, under the `Image` dropdown, there should be a file path that looks something like `//textures/my_image.extension` as part of a file selector. 
+    4. If that is not present, then that image is affected by the empty path issue. Take note of what texture it is, and fix it on the pre-merge accurate shader material by saving the image to a real file, then replacing it with that file via `Image Editor > Hamburger Menu > Image > Replace...`.
+        - You should perform this fix on the accurate shader material to ensure that you do not need to fix it repeatedly each time you merge with that material. The merge and save process does not create these weird textures, it just reveals them.
 
 ## Reporting Issues
 If you encounter issues or need help, you can either open an issue on github or contact me (@DrLong) in the [Helldivers 2 Modding Community discord server](https://discord.gg/ZwjPaZNwH7). Make sure you ping me, because I probably won't see it otherwise.
