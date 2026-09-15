@@ -179,20 +179,40 @@ def from_strip_path(src: Path, expect_2_layers: bool = False) -> PackedChannels:
 
 def from_array(src: Path) -> PackedChannels:
     res = None
+    temp_output = Path(tempfile.gettempdir()) / f"{src.stem}.png"
+    n_layers = 2
     try:
-        temp_output = Path(tempfile.gettempdir()) / f"{src.stem}.png"
         res = subprocess.run([env.TEXASSEMBLE_BIN.as_posix(), "array-strip", "-y", "-f", "R8G8B8A8_UNORM", "-o", temp_output.as_posix(), "--", src.absolute().as_posix()],
                               stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         res.check_returncode()
     except Exception as e:
-        out = res.stdout if res is not None else b"[No output]"
-        out = out.decode()
-        raise MaskSplitException(f"Failed to run texassemble:\n{out}") from e
+        out_texassemble = res.stdout if res is not None else b"[No output]"
+        out_texassemble = out_texassemble.decode()
+        if "ERROR: Input must be a 1D/2D array" in out_texassemble:
+            print("Failed to convert to png strip because the input is not an array. Attempting direct conversion.")
+            n_layers = 1
+            try:
+                # with tempfile.TemporaryDirectory() as tempdir:
+                td = tempfile.mkdtemp()
+                # placeholder block for a `with TemporaryDirectory as td` statement. 
+                # This is omitted because I don't want the directories getting cleaned up right now
+                tp = Path(td)
+                temp_output = tp / f"{src.with_suffix('.png').name}"
+
+                res = subprocess.run([env.TEXCONV_BIN.as_posix(), "-y", "-ft", "png", "-o", tp.as_posix(), "--", src.absolute().as_posix()],
+                                        stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+                res.check_returncode()
+            except Exception as e:
+                out_texconv = res.stdout if res is not None else b"[No output]"
+                out_texconv = out_texconv.decode()
+                raise MaskSplitException(f"Failed to run texassemble:\n{out_texassemble}\n\nAdditionally, failed to run texconv:\n{out_texconv}") from e
+        else: 
+            raise MaskSplitException(f"Failed to run texassemble:\n{out_texassemble}") from e
     
     if not temp_output.exists():
         raise MaskSplitException(f"texassemble output '{temp_output.as_posix()}' does not exist!")
     
-    return from_strip(Image.open(temp_output))
+    return from_strip(Image.open(temp_output), n_layers)
 
 def _find_channels(root: Path, name: str) -> List[ImageClass]:
     def load_channel(p: Path) -> Tuple[int, ImageClass] | None:
