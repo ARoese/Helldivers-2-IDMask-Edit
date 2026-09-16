@@ -133,23 +133,30 @@ class PackedChannels:
         for my_channel, their_channel in zip(self.channels[depth:], other.channels):
             my_channel.paste(their_channel, corner)
 
+    def with_depth(self, depth: int):
+        if self.channels == depth:
+            return PackedChannels(self.channels)
+        elif len(self.channels) > depth:
+            return PackedChannels(self.channels[:depth])
+        else:
+            diff = depth - len(self.channels)
+            extra = [Image.new("L", self.dim()) for _ in range(diff)]
+            return PackedChannels([*self.channels, *extra])
+
+
 def empty_channel_pack(depth: int, dim: Tuple[int, int]) -> PackedChannels:
     channels = [Image.new(mode="L", size=dim) for _ in range(depth)]
     return PackedChannels(channels)
 
-def from_strip(image: ImageClass, n_layers: int | None = None) -> PackedChannels:
+def from_strip(image: ImageClass) -> PackedChannels:
     x,y = image.size
 
-    print(f"Image with dims {image.size} preparing to be loaded as IDMask. Explicit n_layers: {n_layers}")
+    print(f"Image with dims {image.size} preparing to be loaded as IDMask.")
 
-    if n_layers is None:
-        div = y / x
-        num_layers = int(div)
-        if x*num_layers != y:
-            raise MaskSplitException(f"y dimension is not a clean multiple of x dimension. ({x}x{y})")
-        print(f"inferred n_layers to be {num_layers}")
-    else:
-        num_layers = n_layers
+    num_layers = int(y / x)
+    if x*num_layers != y:
+        raise MaskSplitException(f"y dimension is not a clean multiple of x dimension. ({x}x{y})")
+    print(f"inferred n_layers to be {num_layers}")
     
     y_height = y // num_layers
     
@@ -161,26 +168,14 @@ def from_strip(image: ImageClass, n_layers: int | None = None) -> PackedChannels
     
     return PackedChannels(layers)
 
-def from_strip_path(src: Path, expect_2_layers: bool = False) -> PackedChannels:
+def from_strip_path(src: Path) -> PackedChannels:
     img = Image.open(src)
-
-    x, y = img.size
-    if expect_2_layers and y != 2*x:
-        # These images need to be resized independently, because the resize function 
-        # internally does alpha premultiplication when an alpha channel is present. This destroys 
-        # image data for us, so it needs to be avoided.
-        print("resizing image because expect_2_layers")
-        R, G, B, A = map(lambda c: c.resize((x, 2*x)), img.split())
-        scaled = Image.merge("RGBA", [R,G,B,A])
-
-        img = scaled
 
     return from_strip(img)
 
 def from_array(src: Path) -> PackedChannels:
     res = None
     temp_output = Path(tempfile.gettempdir()) / f"{src.stem}.png"
-    n_layers = 2
     try:
         res = subprocess.run([env.TEXASSEMBLE_BIN.as_posix(), "array-strip", "-y", "-f", "R8G8B8A8_UNORM", "-o", temp_output.as_posix(), "--", src.absolute().as_posix()],
                               stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
@@ -190,7 +185,6 @@ def from_array(src: Path) -> PackedChannels:
         out_texassemble = out_texassemble.decode()
         if "ERROR: Input must be a 1D/2D array" in out_texassemble:
             print("Failed to convert to png strip because the input is not an array. Attempting direct conversion.")
-            n_layers = 1
             try:
                 # with tempfile.TemporaryDirectory() as tempdir:
                 td = tempfile.mkdtemp()
@@ -212,7 +206,7 @@ def from_array(src: Path) -> PackedChannels:
     if not temp_output.exists():
         raise MaskSplitException(f"texassemble output '{temp_output.as_posix()}' does not exist!")
     
-    return from_strip(Image.open(temp_output), n_layers)
+    return from_strip(Image.open(temp_output))
 
 def _find_channels(root: Path, name: str) -> List[ImageClass]:
     def load_channel(p: Path) -> Tuple[int, ImageClass] | None:
@@ -256,8 +250,6 @@ def from_channels_dir(root_dir: Path, name: str | None = None) -> PackedChannels
         return from_channels_dir(root_dir, names[-1])
 
     channels = _find_channels(root_dir, name)
-    if len(channels) != 8:
-        raise MaskSplitException(f"expected 8 channels. Only found {len(channels)}.")
     
     pack = PackedChannels(channels)
     

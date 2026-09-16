@@ -143,10 +143,9 @@ class AccurateShaderMainGroup:
                 return None
             
             mask = id_mask_from_blender_strip(tn[0].image)
-        
-        if mask.num_channels() != 8:
-            raise ValueError(f"Expected 8 channels. Got {mask.num_channels()}")
-        
+
+        # ensure the depth coming form this function is always 8
+        mask.with_depth(8)
         return mask
 
     def find_pattern_mask_node(self) -> bpy.types.ShaderNodeTexImage | None:

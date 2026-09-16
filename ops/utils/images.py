@@ -79,15 +79,8 @@ def make_id_mask_images(mask: PackedChannelsType, name: str) -> IDMaskImages:
     # This is omitted because I don't want the directories getting cleaned up right now
 
     print(f"Converting idmask with {mask.num_channels()} channels to 8 blender images")
-    # expect 8 images. If less, need to know how many less
-    size_diff = mask.num_channels() - 8
-    assert size_diff <= 0
-    size_diff = -size_diff
-
-    # add on extra empty (black) channels to make up the space
-    if size_diff != 0:
-        extra = IDMask.empty_channel_pack(size_diff, mask.dim())
-        mask = mask.extended([extra])
+    # expect 8 images. If less, extend or truncate to match
+    mask = mask.with_depth(8)
 
     if True: 
         td_path = Path(td)
@@ -158,16 +151,10 @@ def id_mask_from_blender_channels(channels: List[bpy.types.Image]) -> PackedChan
             channel.save(filepath=channel_path.as_posix())
 
         mask = IDMask.from_channels_dir(tdp)
-        if mask.num_channels() != 8:
-            raise ValueError(f"id mask did not have 8 channels. Found {mask.num_channels()} channels instead")
         
         return mask
     
-def id_mask_from_blender_strip(strip: bpy.types.Image, fix_long=True) -> PackedChannelsType:
-    '''if fix_long is True, then the id mask is always read as if it was 2 layers deep. 
-    So, a 256x1024 strip will still be read correctly. 
-    This is done because some strips in the archive were incorrectly turned into these "long strips"
-    '''
+def id_mask_from_blender_strip(strip: bpy.types.Image) -> PackedChannelsType:
     td = mkdtemp()
     if True:
         tdp = Path(td)
@@ -175,11 +162,6 @@ def id_mask_from_blender_strip(strip: bpy.types.Image, fix_long=True) -> PackedC
         strip_path = tdp / "strip.png"
         strip.save(filepath=strip_path.as_posix())
 
-        mask = IDMask.from_strip_path(strip_path, expect_2_layers=fix_long)
-        if mask.num_channels() != 8:
-            if not fix_long:
-                raise ValueError(f"id mask did not have 8 channels. Found {mask.num_channels()} channels instead")
-            
-
-
+        mask = IDMask.from_strip_path(strip_path)
+        
         return mask
