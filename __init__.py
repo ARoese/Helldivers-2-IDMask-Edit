@@ -7,7 +7,7 @@ from .ops.pillow_install import LibsInstallPanel, InstallLibsOperator
 bl_info = {
     "name": "HD2 LUT Visual Edit",
     "blender": (4, 3, 0),
-    "version": (1, 5, 4),
+    "version": (1, 5, 5),
     "category": "Material",
 }
 
