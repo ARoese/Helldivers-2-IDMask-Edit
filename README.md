@@ -167,7 +167,8 @@ Additionally, an id mask array is created for each merged object. They are named
 Q: I imported an IDMask and it's blurry! How do I edit this?  
 A: Re-import and check "is SDF" in the file picker dialogue. Also see [What is an SDF?](#what-is-an-sdf)
 
-Q: After merging units, one of them
+Q: After merging units, one of them has a messed up IDMask.
+A: Check the IDMask of that unit. If it is square and not a single-channel IDMask, then you should export the dds version, then import that on the Accurate Shader. The addon has no reliable way to determine the number of layers in a png strip, and sometimes its best guess will be wrong.
 
 ## Known Issues
 - When performing a merge operation, if any of the relevant textures is a data block with a broken link, (it is an external or linked image, and that link is broken) then blender will hang and just eat ram. This can happen sometimes when using arsenal shaders that have been appended from another blend file. If your material looks broken, then merging with it might fail!

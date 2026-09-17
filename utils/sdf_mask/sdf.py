@@ -67,7 +67,9 @@ if __name__ == "__main__":
     from pathlib import Path
     from PIL import Image, ImageChops, ImageOps
 
-    test_id_mask = IDMask.from_strip(Image.open(Path("test/0xc89b26d36017d6e9.png")))
+    empty_pixel_mask = IDMask.from_file(Path("test/empty_pixel.png"))
+    empty_pixel_mask.downscale_sdf((128,128))
+    test_id_mask = IDMask.from_strip(Image.open(Path("test/0xc89b26d36017d6e9.png")), 2)
     TARGET_MASK = 3
     original_channel = test_id_mask.channels[TARGET_MASK]
     #original_channel.show()

@@ -155,6 +155,9 @@ def id_mask_from_blender_channels(channels: List[bpy.types.Image]) -> PackedChan
         return mask
     
 def id_mask_from_blender_strip(strip: bpy.types.Image) -> PackedChannelsType:
+    '''
+        converts a blender strip into an IDMask with 2 layers. If the mask is square, 1 layer is assumed.
+    '''
     td = mkdtemp()
     if True:
         tdp = Path(td)
@@ -162,6 +165,6 @@ def id_mask_from_blender_strip(strip: bpy.types.Image) -> PackedChannelsType:
         strip_path = tdp / "strip.png"
         strip.save(filepath=strip_path.as_posix())
 
-        mask = IDMask.from_strip_path(strip_path)
-        
-        return mask
+        mask = IDMask.from_file(strip_path)
+
+        return mask.with_depth(8)

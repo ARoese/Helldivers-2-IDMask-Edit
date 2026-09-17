@@ -148,19 +148,17 @@ def empty_channel_pack(depth: int, dim: Tuple[int, int]) -> PackedChannels:
     channels = [Image.new(mode="L", size=dim) for _ in range(depth)]
     return PackedChannels(channels)
 
-def from_strip(image: ImageClass) -> PackedChannels:
+def from_strip(image: ImageClass, n_layers: int) -> PackedChannels:
+    '''Load a PackedChannels from a strip, expecting no more than `max_layers` layers'''
     x,y = image.size
 
-    print(f"Image with dims {image.size} preparing to be loaded as IDMask.")
-
-    num_layers = int(y / x)
-    if x*num_layers != y:
-        raise MaskSplitException(f"y dimension is not a clean multiple of x dimension. ({x}x{y})")
-    print(f"inferred n_layers to be {num_layers}")
+    print(f"Image with dims {image.size} with {n_layers} layers preparing to be loaded as IDMask.")
     
-    y_height = y // num_layers
+    y_height = y // n_layers
+    if y != y_height * n_layers:
+        raise MaskSplitException(f"{n_layers} does not divide {y}. This indicates that the given number of layers on the strip is incorrect.")
     
-    layers = [image.crop((0, layer*y_height, x, (layer+1)*y_height)) for layer in range(num_layers)]
+    layers = [image.crop((0, layer*y_height, x, (layer+1)*y_height)) for layer in range(n_layers)]
     layers = [layer.split() for layer in layers]
     layers = list(itertools.chain(*layers))
 
@@ -168,14 +166,12 @@ def from_strip(image: ImageClass) -> PackedChannels:
     
     return PackedChannels(layers)
 
-def from_strip_path(src: Path) -> PackedChannels:
-    img = Image.open(src)
-
-    return from_strip(img)
-
 def from_array(src: Path) -> PackedChannels:
     res = None
     temp_output = Path(tempfile.gettempdir()) / f"{src.stem}.png"
+    # PILLOW does not support arrays, so we can't use this for a full load. 
+    # We can, however, use it to get the dimension
+    pillow_dim = Image.open(src).size 
     try:
         res = subprocess.run([env.TEXASSEMBLE_BIN.as_posix(), "array-strip", "-y", "-f", "R8G8B8A8_UNORM", "-o", temp_output.as_posix(), "--", src.absolute().as_posix()],
                               stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
@@ -196,6 +192,7 @@ def from_array(src: Path) -> PackedChannels:
                 res = subprocess.run([env.TEXCONV_BIN.as_posix(), "-y", "-ft", "png", "-o", tp.as_posix(), "--", src.absolute().as_posix()],
                                         stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
                 res.check_returncode()
+                n_layers = 1
             except Exception as e:
                 out_texconv = res.stdout if res is not None else b"[No output]"
                 out_texconv = out_texconv.decode()
@@ -205,8 +202,10 @@ def from_array(src: Path) -> PackedChannels:
     
     if not temp_output.exists():
         raise MaskSplitException(f"texassemble output '{temp_output.as_posix()}' does not exist!")
-    
-    return from_strip(Image.open(temp_output))
+
+    strip = Image.open(temp_output)
+    n_layers = strip.size[1] // pillow_dim[1]
+    return from_strip(strip, n_layers)
 
 def _find_channels(root: Path, name: str) -> List[ImageClass]:
     def load_channel(p: Path) -> Tuple[int, ImageClass] | None:
@@ -256,10 +255,16 @@ def from_channels_dir(root_dir: Path, name: str | None = None) -> PackedChannels
     return pack
 
 def from_file(path: Path) -> PackedChannels:
-    '''Create a PackedChannels object, automatically detecting the source type'''
+    '''Create a PackedChannels object, automatically detecting the source type.
+    If the source is a non-dds image, the number of layers is assumed to be 2 unless the image is square, in which case it is assumed to be 1'''
     if path.suffix == ".dds":
         mask = from_array(path)
     else: # assume any other image type is a strip
-        mask = from_strip_path(path)
+        strip = Image.open(path)
+        strip.load()
+        n_layers = 2
+        if strip.size[0] == strip.size[1]:
+            n_layers = 1
+        mask = from_strip(strip, n_layers)
 
     return mask
