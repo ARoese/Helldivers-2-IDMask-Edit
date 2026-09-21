@@ -1,8 +1,10 @@
 from PIL import Image
+from PIL import ImageChops
 from PIL.Image import Image as ImageClass
 from io import BytesIO
 from typing import Iterable, Tuple, List, Self
 from pathlib import Path
+from math import ceil
 import subprocess
 import tempfile
 import itertools
@@ -38,6 +40,8 @@ class PackedChannels:
         return PackedChannels(scaled_channels)
 
     def downscale_sdf(self, new_dim: Tuple[int, int]):
+        if self.dim() == new_dim:
+            return self
         scaled_channels = [channel_into_sdf(c).resize(new_dim) for c in self.channels]
         return PackedChannels(scaled_channels)
     
@@ -54,7 +58,11 @@ class PackedChannels:
     def num_channels(self) -> int:
         return len(self.channels)
 
-    def swizzle_layers(self) -> List[ImageClass]:        
+    def swizzle_layers(self) -> List[ImageClass]:
+        nc = self.num_channels()
+        if nc % 4 != 0 or nc == 0:
+            round_depth = 4*int(ceil(nc / 4))
+            self = self.with_depth(round_depth)
         layers = batched(self.channels, 4, pad_with=lambda: Image.new(mode="L", size=self.dim()))
         images = [Image.merge("RGBA", bands=layer) for layer in layers]
         return images
@@ -79,7 +87,7 @@ class PackedChannels:
         # This is omitted because I don't want the directories getting cleaned up right now
         if True:
             tmpdir = Path(tmpdir)
-            swizzled_layers = self.swizzle_layers()
+            swizzled_layers = self.swizzle_layers() if self.num_channels() >= 8 else self.with_depth(8).swizzle_layers()
             layer_paths = [tmpdir / f"{n+1}.png" for n in range(len(swizzled_layers))]
             output_path = tmpdir / "out.dds"
             for path, layer in zip(layer_paths, swizzled_layers):
@@ -115,7 +123,7 @@ class PackedChannels:
         
         return dest_paths
     
-    def extend(self, others: Iterable[Self]):
+    def _extend(self, others: Iterable[Self]):
         for o in others:
             self.channels.extend(o.channels)
 
@@ -132,6 +140,21 @@ class PackedChannels:
         
         for my_channel, their_channel in zip(self.channels[depth:], other.channels):
             my_channel.paste(their_channel, corner)
+
+    def put(self, other: ImageClass, depth: int):
+        '''delete a channel'''
+        if depth >= len(self.channels) or depth < 0:
+            raise ValueError(f"Attempted to put() at depth {depth} on a PackedChannels with depth {self.num_channels()}")
+        if self.dim() != other.size:
+            raise ValueError(f"Attempted to put() an image with dim {other.size} on a PackedChannels with dim {self.dim()}")
+
+        self.channels[depth] = ImageChops.lighter(self.channels[depth], other)
+
+    def delete(self, depth: int):
+        if depth >= len(self.channels) or depth < 0:
+            raise ValueError(f"Attempted to delete() at depth {depth} on a PackedChannels with depth {self.num_channels()}")
+
+        del self.channels[depth]
 
     def with_depth(self, depth: int):
         if self.channels == depth:

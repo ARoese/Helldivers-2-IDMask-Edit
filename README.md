@@ -37,6 +37,7 @@ It probably also works on other versions, but that's not guarunteed. If you have
     - See [this discord thread](https://discord.com/channels/1210541115829260328/1222290154409033889) for details and a video on how to do this manually
     - It comes down to exporting the mesh and associated textures. Specifically, the IDMask, Pattern mask, and LUTs
     - You can also append objects from the [helldivers 2 armory](https://discord.com/channels/1210541115829260328/1446534760045482046), which has this set up for each armor set
+    - You can right click any number of objects with the accurate shader material and patch them for ID and pattern mask painting by right clicking and clicking "Patch Accurate Shader". This will use the IDMasks and pattern masks that come with the shader, and optionally upscale them to whatever dimension you want. Just expand the options in the bottom left. See the SDF notes below.
 2. Import the IDMask dds
     1. Right click your object
     2. Click the "Import IDMask" option in the context menu.
@@ -99,6 +100,13 @@ When you're done painting and ready to make a patch or otherwise use the IDMask 
 3. Set your output file. Existing files will be overwritten.
     - This output file can be added to a patch however you'd like
     - see [What is an SDF](#what-is-an-sdf) for information on the "as SDF" option. You want to use this!
+
+##### Exporting to SDK material
+0. Make sure a HD2 SDK Patch is open
+1. Right click any number of objects with the accurate shader set up
+2. Click "Convert to SDK Material"
+3. Set your output dir. Relevant assets like IDMask arrays, pattern masks, decals, and normals will be placed there.
+    - SDK materials will be created and applied to each object. It can now be used with the SDK's "Save Unit" operator on right click. LUTs will need to be added to the patch manually, but everything else is automatic.
 
 ##### What is an SDF?
 When importing and exporting IDMask arrays, you can find "is SDF?" and "as SDF" checkboxes. You should look at the pretty pictures in [this whitepaper by valve](https://steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf) to see why SDFs are used in HD2 and what problem they solve. I also reference it in this explanation.

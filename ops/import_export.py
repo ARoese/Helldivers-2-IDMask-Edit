@@ -180,59 +180,6 @@ class ImportIDMaskOperator(IDMask_Import):
     bl_label = "Import IDMask"
     bl_options = {'REGISTER', 'UNDO'}
 
-    @classmethod
-    def _construct_id_mask_input_nodes(cls, tree: bpy.types.ShaderNodeTree, images: IDMaskImages) -> IDMaskSockets:
-        ul,_ = tree_util.tree_bounding_box(tree)
-        full_texture_node_height = 300.0
-        ul = ul[0]-400.0, ul[1]+full_texture_node_height*9
-        def make_uv() -> bpy.types.ShaderNodeUVMap:
-            n = tree.nodes.new("ShaderNodeUVMap")
-            assert isinstance(n, bpy.types.ShaderNodeUVMap)
-            n.uv_map = "UVMap" # This is the uv map the shader expects to be used
-            n.location.xy = ul[0]-400.0,ul[1]-800
-            return n
-
-        def make_cc() -> bpy.types.ShaderNodeCombineColor:
-            n = tree.nodes.new("ShaderNodeCombineColor")
-            assert isinstance(n, bpy.types.ShaderNodeCombineColor)
-            n.mode = "RGB"
-            n.location.xy = ul[0]+400.0, ul[1]-full_texture_node_height
-            return n
-            
-        uv_map = make_uv()
-        def make_tex(image: Image) -> bpy.types.ShaderNodeTexImage:
-            nonlocal ul
-            n = tree.nodes.new("ShaderNodeTexImage")
-            assert isinstance(n, bpy.types.ShaderNodeTexImage)
-            assert image.colorspace_settings is not None
-            n.image = image
-            # This is imporant; Color space transforms on these will really mess up the shader's behavior
-            n.image.colorspace_settings.name = "Non-Color" #type: ignore
-            tree.links.new(n.inputs[0], uv_map.outputs[0])
-            n.location.xy = ul
-            ul = ul[0], ul[1]-full_texture_node_height
-
-            return n
-        
-        def make_layer_outputs(images: Tuple[Image, Image, Image, Image]) -> Tuple[bpy.types.NodeSocketColor, bpy.types.NodeSocketFloat]:
-            '''Make 4 non-color image textures, and swizzle their black/white outputs to RGBA of a color'''
-            cc = make_cc()
-            r,g,b,a = (make_tex(image) for image in images)
-
-            tree.links.new(cc.inputs[0], r.outputs["Color"])
-            tree.links.new(cc.inputs[1], g.outputs["Color"])
-            tree.links.new(cc.inputs[2], b.outputs["Color"])
-
-            # Color -> float is mixing, but blender allows this and it's fine.
-            # Outputting the Color output for the a channel is what is supposed to happen here. 
-            # The actual data for that channel IS in the color!
-            return cc.outputs["Color"], a.outputs["Color"] #type: ignore
-        
-        l1 = make_layer_outputs(images[:4])
-        l2 = make_layer_outputs(images[4:])
-
-        return (*l1, *l2)
-
     def execute_accurate_shader(self, context: Context):
         ao = context.active_object
         assert ao is not None
@@ -250,28 +197,7 @@ class ImportIDMaskOperator(IDMask_Import):
 
         # make the id mask images from the array
         id_mask_channels = image_util.make_id_mask_images(id_mask_array, name)
-
-        # patch up the shader if needed
-        if not mg.is_patched():
-            mg.modify_shader_for_editing()
-
-        # get the IDMask group inputs
-        inputs = mg.get_group_inputs()
-
-        # try and get existing texture inputs, and create them if necessary
-        # either way, the new channels get assigned
-        id_mask_channel_nodes = mg.get_idmask_channel_texture_nodes()
-        if id_mask_channel_nodes is None:
-            # construct the input nodes
-            texture_outputs = self._construct_id_mask_input_nodes(active_tree, id_mask_channels)
-            
-            #link them up
-            for input, output in zip(inputs, texture_outputs):
-                active_tree.links.new(input, output)
-        else:
-            # change the texture nodes to point to the new channels
-            for node, image in zip(id_mask_channel_nodes, id_mask_channels):
-                node.image = image
+        mg.set_idmask_images(id_mask_channels)
 
     def execute_debug_material(self, context: Context):
         ao = context.active_object

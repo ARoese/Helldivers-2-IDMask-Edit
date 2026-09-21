@@ -6,6 +6,7 @@ import subprocess
 import struct
 import itertools
 import pprint
+import math
 
 from . import env
 
@@ -15,7 +16,7 @@ class LUTException(Exception):
 Float4 = Tuple[float, float, float, float]
 
 class LUT:
-    '''R32G32B32A32_FLOAT lookup table. Follows PIL coordinate system; 0,0 is top left'''
+    '''R32G32B32A32_FLOAT lookup table. Follows PIL coordinate system; 0,0 is top left. Coordinate order is (x,y)'''
     # hidden; Interact with this via a row-column interface
     # index order is [y][x] with the first y being the top row
     _channels: List[List[Float4]] 
@@ -57,6 +58,14 @@ class LUT:
 
         return rows
 
+    def del_row(self, row: int):
+        dim = self.dim()
+        if row < 0 or row > dim[1]:
+            raise ValueError(f"Attempted to del_row({row}) on LUT with dim {dim}")
+
+        del self._channels[row]
+        # assert that we just removed a row, not a column
+        assert self.dim()[0] == dim[0]
     
     def append_rows(self, rows: Iterable[Iterable[Float4]]):
         if not rows:
@@ -112,6 +121,27 @@ class LUT:
 
     def clone(self):
         return self.__copy__()
+
+    def eq(self, other: Self):
+        if self.dim()[1] != other.dim()[1]:
+            return False
+        
+        return all(lut_row_equals(r1, r2) for r1,r2 in zip(self._channels, other._channels))
+
+
+LUT_EPSILON = 1e-4
+def lut_row_equals(r1: List[Float4], r2: List[Float4]) -> bool:
+    if len(r1) != len(r2):
+        return False
+    
+    def f4_eq(v1: Float4, v2: Float4) -> bool:
+        for p1,p2 in zip(v1,v2):
+            if not math.isclose(p1,p2, abs_tol=LUT_EPSILON):
+                return False
+
+        return True
+
+    return all(f4_eq(c1, c2) for c1,c2 in zip(r1, r2))
 
 def from_matrix(matrix: bytes) -> LUT:
     if len(matrix) < 8:

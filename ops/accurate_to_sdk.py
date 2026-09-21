@@ -9,9 +9,9 @@ from .utils import atlas_pieces
 from .utils.custom_types import *
 from .utils.sdk_material_interface import poll_create_sdk_lut_material
 
-class ComplexMerge(bpy.types.Operator):
-    bl_idname = "hd2visual.complex_merge"
-    bl_label = "Complex Merge"
+class AccurateToSDK(bpy.types.Operator):
+    bl_idname = "hd2visual.accurate_to_sdk"
+    bl_label = "Accurate to SDK"
     bl_options = {'REGISTER', 'UNDO'}
 
     # Properties to store the selection
@@ -33,7 +33,7 @@ class ComplexMerge(bpy.types.Operator):
         layout = self.layout
         assert layout is not None
 
-        layout.label(text="Select a directory to export the merge assets to", icon='INFO')
+        layout.label(text="Select a directory to export the assets to", icon='INFO')
         
         layout.prop(self, "to_sdf")
         if self.to_sdf:
@@ -60,16 +60,14 @@ class ComplexMerge(bpy.types.Operator):
         pieces = [atlas_pieces.from_bpy_obj(obj, sdf_downscale_target) for obj in objects]
         assert len(pieces) == len(objects)
 
-        shared_primary_lut = atlas_pieces.atlas_luts(pieces)
-
         output_dir = Path(self.directory)
-        shared_primary_lut_path = output_dir / f"{ao.name}-primary-lut-atlas.dds"
-        with open(shared_primary_lut_path, 'wb') as out_file:
-            out_file.write(shared_primary_lut.to_dds().getbuffer())
-        
-        shared_primary_lut = bpy.data.images.load(shared_primary_lut_path.as_posix(), check_existing=False)
 
         for piece in pieces:
+            primary_lut_path = output_dir / f"{ao.name}-primary-lut.dds"
+            with open(primary_lut_path, 'wb') as out_file:
+                out_file.write(piece.primary_lut.to_dds().getbuffer())
+            
+            shared_primary_lut = bpy.data.images.load(primary_lut_path.as_posix(), check_existing=False)
             piece.apply_sdk_material(shared_primary_lut, output_dir)
 
         # Let the user do this themselves. That way, they can decide what needs to be part of what unit
@@ -81,16 +79,8 @@ class ComplexMerge(bpy.types.Operator):
         ao = context.active_object
         so = context.selected_objects
 
-        if ao is None or len(so) < 2:
-            cls.poll_message_set("Multiple objects must be selected")
-            return False
-
         if any(o.type != "MESH" for o in [ao, *so]):
             cls.poll_message_set("All selected objects need meshes")
-            return False
-        
-        if not bpy.ops.object.join.poll(): #type: ignore # This poll call is valid, it's not not exposed in this type system
-            cls.poll_message_set("Cannot join these objects (as if via ctrl+J)")
             return False
         
         if (reason := poll_create_sdk_lut_material()) is not None:
