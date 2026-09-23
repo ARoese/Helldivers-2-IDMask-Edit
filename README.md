@@ -219,3 +219,7 @@ If you encounter issues or need help, you can either open an issue on github or 
 I will accept pull requests for anything that can be justified, but these are priorities
 
 - Clean up code. Currently, I can't think of any features or QOL tweaks to add
+
+## Credits
+[Paydex editor](https://github.com/paytonrog/paydex-lut-editor): Lots of LUT-related label strings. It was a good reference when building the LUT editor
+[LUT Modding guide](https://docs.google.com/document/d/1A_bsjh-wc6nhuxYodRk5LURugD0mQd2kyctkOqZysks/edit?tab=t.18f273uxnjps): Even more LUT information
