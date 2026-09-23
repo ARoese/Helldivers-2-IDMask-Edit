@@ -18,6 +18,7 @@ from ...utils.LUT import LUT as LUTType
 from ...utils.itertools_ext import batched
 import subprocess
 from ...utils import env
+import itertools
 
 # TODO: Some of these functions are quite slow on large images. 4K is about the upper limit of usability. Improve this.
 
@@ -55,6 +56,25 @@ def lut_from_blender_image(image: Image) -> LUTType:
     rows.reverse() # blender coordinates are y-positive. Ours are Y-negative.
     
     return LUT.from_rows(rows)
+
+def populate_blender_lut(lut: LUTType, image: Image):
+    if not image.is_float:
+        raise ValueError(f"Given image '{image.name}' is not a float image")
+
+    if image.channels != 4:
+        raise ValueError(f"Given image '{image.name}' does not have 4 channels")
+
+    x,y = image.size
+    image_dim = (x,y)
+    if lut.dim() != image_dim:
+        raise ValueError(f"Given image '{image.name}' does not match the LUT dimension. ({image_dim} != {lut.dim()})")
+
+    pixels: List[float] = []
+    for row in reversed(lut.rows()):
+        for pixel in row:
+            pixels.extend(pixel)
+
+    image.pixels = pixels # type: ignore # This is actually a list[float]
 
 def load_blender_mask_image_from_path(path: Path) -> bpy.types.Image:
     im = bpy.data.images.load(path.as_posix(), check_existing=False)

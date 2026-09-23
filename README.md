@@ -70,6 +70,18 @@ The accurate shader can be tedious to set up, especially for custom works, so a 
 > Using image dimensions that are not powers of 2 (512, 1024, 2048, etc) will crash the game when loaded. This is a general limitation of helldivers textures, but this addon will give you the footgun to allow for special cases.
 
 ## Usage
+### LUT Editing
+![lut editing](README_assets/LUT_Editing_example.gif)
+#### Editing LUT
+When an object using the accurate shader is selected, an `LUT Editor` panel will appear in the side bar (accessible by pressing N). This same panel will also appear in the image editor when you have a LUT selected. At the top of the panel, you can select which LUT row you are editing. You should know that each LUT row represents a material, and which material is applied depends on the IDMask painting. 
+
+Changes made within this panel will be applied continuously, so you can immediately see the effects of each setting if you're viewing the model in the Material Preview shading mode. What you see is what you get.
+
+#### Exporting LUT
+Changes are applied directly to the backing LUT image live. Anything that saves modified images (ctrl+s, for example) will save your changes. If the LUT is packed, the changes get saved to your blend file. If your image is unpacked, then the changes get saved to that file.
+
+You can also right click any object with the accurate shader and export its LUT using the `Export LUT to DDS` operator. This will prompt you to pick an output file, and the LUT dds will be saved there. You can import this DDS to a patch using the HD2 SDK.
+
 ### ID Mask Painting
 #### General painting
 The addon adds a toolbar accessible by pressing N in the 3d viewer in texture paint mode which allows quickly switching between materials being painted. If a material was not set up for painting, then these buttons will not be clickable. Hover over them to see why. IDMask painting is particularly fluid in the material preview rendering mode. 
