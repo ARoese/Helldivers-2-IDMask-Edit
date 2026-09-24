@@ -103,10 +103,24 @@ class PackedChannels:
                 out = res.stdout if res is not None else b"[No output]"
                 out = out.decode()
                 raise MaskSplitException(f"texassemble failed:\n{out}") from e
-            
+
             if not output_path.exists():
                 raise MaskSplitException(f"texassemble output '{output_path.as_posix()}' does not exist!")
-        
+
+            # TODO: Make sure that helldivers can load IDMasks in BC7_UNORM format
+            res = None
+            try:
+                args = [env.TEXCONV_BIN.as_posix(), "-y", "-f", "BC7_UNORM", "-ft", "DDS", "-dx10", "-o", tmpdir.as_posix(), "--", output_path.as_posix()]
+                res = subprocess.run(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+                res.check_returncode()
+            except Exception as e:
+                out = res.stdout if res is not None else b"[No output]"
+                out = out.decode()
+                raise MaskSplitException(f"texconv failed:\n{out}") from e
+            
+            if not output_path.exists():
+                raise MaskSplitException(f"texconv output '{output_path.as_posix()}' does not exist!")
+            
             with open(output_path, 'rb') as output_path:
                 output.write(output_path.read())
         
