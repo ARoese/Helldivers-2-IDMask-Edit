@@ -35,7 +35,7 @@ class PatchAccurate(bpy.types.Operator):
             assert id_mask is not None
 
             if self.as_sdf:
-                id_mask = id_mask.downscale_sdf((self.sdf_upscale_target, self.sdf_upscale_target))
+                id_mask = id_mask.upscale_at((self.sdf_upscale_target, self.sdf_upscale_target))
 
             # make the id mask images from the array
             id_mask_channels = image_util.make_id_mask_images(id_mask, object.name)
