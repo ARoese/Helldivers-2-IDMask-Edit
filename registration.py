@@ -22,7 +22,6 @@ def draw_object_func(self: bpy.types.Menu, context):
     layout.operator(ExportPatternMaskOperator.bl_idname, text="Export Pattern Mask")
     layout.operator(ExportLUTOperator.bl_idname, text="Export LUT to DDS")
     layout.separator(type="LINE")
-    # TODO: Right clicking assets with high resolution IDMasks is very slow. Optimize their draw/poll calls.
     layout.operator(ComplexMerge.bl_idname, text="Merge Assets")
     layout.operator(AccurateToSDK.bl_idname, text="Convert to SDK material")
     layout.operator(PatchAccurate.bl_idname, text="Patch Accurate Shader")

@@ -32,7 +32,8 @@ class PatchAccurate(bpy.types.Operator):
             assert mg is not None
 
             id_mask = mg.get_idmask()
-            assert id_mask is not None
+            if id_mask is None:
+                raise ValueError(f"Failed to get IDMask for object {object.name}")
 
             if self.as_sdf:
                 id_mask = id_mask.upscale_at((self.sdf_upscale_target, self.sdf_upscale_target))
@@ -75,10 +76,10 @@ class PatchAccurate(bpy.types.Operator):
                 cls.poll_message_set(f"Failed to find main group for object {object.name}")
                 return False
 
-            id_mask = mg.get_idmask()
-            if id_mask is None:
-                cls.poll_message_set(f"Failed to get IDMask for object {object.name}")
-                return False
+            # id_mask = mg.get_idmask() # This call is too slow for a poll function
+            # if id_mask is None:
+            #     cls.poll_message_set(f"Failed to get IDMask for object {object.name}")
+            #     return False
 
             pattern_mask_node = mg.find_pattern_mask_node()
             if pattern_mask_node is None:
