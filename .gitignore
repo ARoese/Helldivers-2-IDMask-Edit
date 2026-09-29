@@ -5,3 +5,4 @@ big_blend.blend
 LUTranslate_rust/target
 
 release/*
+saved_data/*

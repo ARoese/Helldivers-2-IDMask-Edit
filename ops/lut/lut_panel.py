@@ -7,6 +7,8 @@ from .ui import draw_lut_pixel
 from .util import is_LUT_image
 from ..utils import accurate_shader
 
+from . import saved_rows
+
 def panel_draw(layout: bpy.types.UILayout, bridge: BPYLUTBridge):
     col = layout.column(align=True)
     col.prop(bridge.lut_property, "selected_row")
@@ -164,13 +166,15 @@ class ExportLUTOperator(bpy.types.Operator):
 
 CLASSES = [LUTPixelProperty, LUTProperty, LUTEditPanelIMEditor, LUTEditPanel3D, ExportLUTOperator]
 def register():
+    saved_rows.register()
     for c in CLASSES:
         bpy.utils.register_class(c)
 
     bpy.types.WindowManager.hd2_idmask_lut_property = bpy.props.PointerProperty(type=LUTProperty) #type: ignore
 
 def unregister():
+    saved_rows.unregister()
     for c in reversed(CLASSES):
         bpy.utils.unregister_class(c)
-
+    
     del bpy.types.WindowManager.hd2_idmask_lut_property #type: ignore

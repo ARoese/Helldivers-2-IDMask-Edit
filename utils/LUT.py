@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, Tuple, Iterable, Self
 
 from io import BytesIO
@@ -36,9 +37,16 @@ class LUT:
         return self._channels[xy[1]][xy[0]]
     
     def set_row(self, row: int, values: Iterable[Float4]):
+        values_n = len(list(values))
+        if values_n > self.dim()[0]:
+            raise ValueError(f"Attemped to set_row() with a row of length {values_n} on a LUT with row length {self.dim()[0]}")
+
+        if row < 0 or row >= self.dim()[1]:
+            raise ValueError(f"Attemped to set_row({row}, ...) on a LUT with {self.dim()[1]} rows")
+
         columns = range(self.dim()[0])
         for c,v in zip(columns, values):
-            self.set_pixel((row,c),v)
+            self.set_pixel((c,row),v)
 
     def get_row(self, row: int) -> List[Float4]:
         row_length = self.dim()[0]
@@ -115,6 +123,9 @@ class LUT:
         
         output.write(res.stdout)
         return output
+
+    def take_row(self, idx: int) -> LUT:
+        return LUT([self.get_row(idx)])
 
     def __copy__(self):
         return LUT(self._channels)

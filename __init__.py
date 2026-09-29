@@ -4,12 +4,17 @@ import bpy
 from .ops import pillow_install
 from .ops.pillow_install import LibsInstallPanel, InstallLibsOperator
 
+import os
+from pathlib import Path
+
 bl_info = {
     "name": "HD2 LUT Visual Edit",
     "blender": (4, 3, 0),
     "version": (1, 6, 1),
     "category": "Material",
 }
+
+ADDON_DIR = Path(os.path.realpath(__file__)).parent
 
 #pillow_install.is_pillow_installed = False
 

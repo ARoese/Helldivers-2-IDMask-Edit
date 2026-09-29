@@ -156,7 +156,8 @@ class LUTProperty(bpy.types.PropertyGroup):
         default=1,
         set=clamped_set,
         get=get_selected_row,
-        min=1
+        min=1,
+        max=8
     ) # type: ignore
 
     map_hash: bpy.props.IntProperty(
