@@ -66,13 +66,17 @@ class AtlasPieces:
                 self.id_mask.delete(channel_idx)
 
     def inherit_lut(self, pieces: List[Self]) -> bool:
+        dbg_idx = 0
         for other_piece in pieces:
             if other_piece.primary_lut.eq(self.primary_lut):
+                print(f"inheriting LUT {dbg_idx}")
                 self.primary_lut = other_piece.primary_lut
                 return True
+            dbg_idx += 1
         return False
 
     def generate_id_mask(self, prior_depth: int):
+        print(f"Generating IDMask with prior_depth: {prior_depth}")
         extended_id_mask = IDMask.empty_channel_pack(depth=prior_depth, dim=self.id_mask.dim()).extended([self.id_mask])
         self.id_mask = extended_id_mask
 
@@ -187,13 +191,16 @@ def from_bpy_obj(obj: bpy.types.Object, sdf_downscale_target: int | None) -> Atl
 
 def atlas_luts(pieces: List[AtlasPieces]) -> LUTType:
     primary_lut_stack = pieces[0].primary_lut.clone()
+    
     for idx,piece in enumerate(pieces[1:]): # object 1 is exempt from optimization
         print(f"Processing {piece.obj.name}")
         # check if our LUT already exists deeper in the stack
         if not piece.inherit_lut(pieces[:idx]):
             # Optimize and try again
+            print("Failed to inherit unoptimized LUT. Trying with optimization")
             piece.optimize_lut()
             if not piece.inherit_lut(pieces[:idx]):
+                print("found unique LUT. Adding to atlas")
                 # if we still can't find rows that work, then append the new LUT onto the stack
                 primary_lut_stack.extend(piece.primary_lut)
 
@@ -201,13 +208,21 @@ def atlas_luts(pieces: List[AtlasPieces]) -> LUTType:
         # NOTE: will help minimize the IDMask stack depths
 
         prior_depth = 0
-        for prior_piece in pieces[:idx+1]: # this intentionally includes ourselves as a stopping point
-            if prior_piece.primary_lut == piece.primary_lut:
+        found = False
+        for prior_piece in pieces: # this intentionally includes ourselves as a stopping point
+            print(f"{str(prior_piece.primary_lut)} =?= {str(piece.primary_lut)}")
+            if prior_piece.primary_lut is piece.primary_lut:
                 piece.generate_id_mask(prior_depth)
+                found = True
                 break
             else:
                 prior_depth += prior_piece.primary_lut.dim()[1]
+                print(f"Prior depth: {prior_depth}")
+        if not found:
+            raise Exception(f"Internal error while generating merge: LUT offset not found for unit '{piece.obj.name}'. This is a programmer error.")
 
+    for piece in pieces:
         piece.primary_lut = primary_lut_stack
-
+    # TODO: This could possibly require that the LUT depth be rounded up to the nearest multiple of 4/8
+    # because we don't know if the LUT row is indexed from the last mask or the first. We assume first here, but that might be wrong
     return primary_lut_stack

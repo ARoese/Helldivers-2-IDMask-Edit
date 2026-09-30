@@ -9,6 +9,8 @@ from .utils import atlas_pieces
 from .utils.custom_types import *
 from .utils.sdk_material_interface import poll_create_sdk_lut_material
 
+# TODO: This is creating images (normals, etc) with broken empty paths. The issue does not become apparent until the SECOND time a merge is performed.
+# TODO: It is probably related to the ensure_not_unpacked_exr code, but not sure
 class ComplexMerge(bpy.types.Operator):
     bl_idname = "hd2visual.complex_merge"
     bl_label = "Complex Merge"

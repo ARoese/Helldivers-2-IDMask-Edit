@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import List, Tuple, Iterable, Self
+from copy import deepcopy
 
 from io import BytesIO
 from pathlib import Path
@@ -128,13 +129,13 @@ class LUT:
         return LUT([self.get_row(idx)])
 
     def __copy__(self):
-        return LUT(self._channels)
+        return LUT(deepcopy(self._channels))
 
     def clone(self):
         return self.__copy__()
 
     def eq(self, other: Self):
-        if self.dim()[1] != other.dim()[1]:
+        if self.dim() != other.dim():
             return False
         
         return all(lut_row_equals(r1, r2) for r1,r2 in zip(self._channels, other._channels))

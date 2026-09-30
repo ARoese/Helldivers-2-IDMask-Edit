@@ -156,7 +156,7 @@ class PackedChannels:
             my_channel.paste(their_channel, corner)
 
     def put(self, other: ImageClass, depth: int):
-        '''delete a channel'''
+        '''put a given channel onto the channel at given depth. Channels are composited using the lighter() ImageChops'''
         if depth >= len(self.channels) or depth < 0:
             raise ValueError(f"Attempted to put() at depth {depth} on a PackedChannels with depth {self.num_channels()}")
         if self.dim() != other.size:
