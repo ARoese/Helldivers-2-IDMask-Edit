@@ -21,8 +21,6 @@ import subprocess
 from ...utils import env
 import itertools
 
-# TODO: Some of these functions are quite slow on large images. 4K is about the upper limit of usability. Improve this.
-
 def ensure_not_unpacked_exr(img: Image):
     if img.packed_file is not None:
         raise ValueError(f"Expected packed image. Given image {img.name} was not packed.")
@@ -85,53 +83,31 @@ def load_blender_mask_image_from_path(path: Path) -> bpy.types.Image:
     im.colorspace_settings.name = "Non-Color" #type: ignore
     return im
 
-# TODO: Use numpy for transfer instead of saving a temp file and loading it
-def blender_image_from_pillow_image(image: PILImageType, name: str = "image") -> bpy.types.Image:
-    td = mkdtemp()
-    if True: 
-        td_path = Path(td)
-        image_path = td_path / f"{name}.png"
-        image.save(image_path.as_posix())
+def blender_image_from_pillow_image(image: PILImageType, name: str = "image_from_pil", is_data: bool = True) -> bpy.types.Image:
+    pixel_array = np.asarray(image.convert("RGBA"), dtype=np.float32) / 255.0
+    pixel_array = np.flipud(pixel_array)
+    new_image = bpy.data.images.new(
+        name=name,
+        width=image.size[0],
+        height=image.size[1],
+        alpha=True,
+        is_data=is_data
+    )
 
-        return load_blender_mask_image_from_path(image_path)
-
-# TODO: Use numpy for transfer instead of saving a temp file and loading it
+    new_image.pixels.foreach_set(pixel_array.ravel()) # type: ignore # The pixels array has an incorrect type. It is float[], not float
+    return new_image
+    
 def make_id_mask_images(mask: PackedChannelsType, name: str) -> IDMaskImages:
-    td = mkdtemp()
-    # placeholder block for a `with TemporaryDirectory as td` statement. 
-    # This is omitted because I don't want the directories getting cleaned up right now
-
     print(f"Converting idmask with {mask.num_channels()} channels to 8 blender images")
     # expect 8 images. If less, extend or truncate to match
     mask = mask.with_depth(8)
+    channels = tuple([blender_image_from_pillow_image(channel, f"{name}-{i+1}") for i,channel in enumerate(mask.channels)])
 
-    if True: 
-        td_path = Path(td)
-        channel_paths = mask.save_channels(td_path, name)
-        
-        images = tuple(load_blender_mask_image_from_path(path) for path in channel_paths)
+    assert len(channels) == 8
 
-    assert len(images) == 8
+    return channels
 
-    return images
-
-# TODO: Use numpy for transfer instead of saving a temp file and loading it
-def id_mask_array_from_images(images: IDMaskImages) -> PackedChannelsType:
-    td = mkdtemp()
-    # placeholder block for a `with TemporaryDirectory as td` statement. 
-    # This is omitted because I don't want the directories getting cleaned up right now
-    if True: 
-        td_path = Path(td)
-        
-        # unpack them to the temp dir
-        for image in images:
-            out_name = (td_path / image.name).with_suffix(".png").as_posix()
-            image.save(filepath=out_name)
-
-        id_mask = IDMask.from_channels_dir(td_path)
-    
-    return id_mask
-
+#TODO: This still seems to be pretty slow. Not horribly so, but it could still do better.
 def pillow_image_from_blender_image(blend_image: bpy.types.Image) -> PILImageType:
     '''accepts an image with 1, 3, or 4 channels'''
 
@@ -145,7 +121,8 @@ def pillow_image_from_blender_image(blend_image: bpy.types.Image) -> PILImageTyp
         4: "RGBA"
     }
 
-    pixels = np.array(blend_image.pixels[:], dtype=np.float32) #type: ignore # This type is wrong. pixels is an iterable of float, not a float
+    pixels = np.empty(dim_x * dim_y * 4, dtype=np.float32)
+    blend_image.pixels.foreach_get(pixels) #type: ignore # This type is wrong. pixels is an iterable of float, not a float
     pixels = (pixels * 255).astype(np.uint8)
     pixels = pixels.reshape((dim_y, dim_x, nchannels))
     pixels = np.flipud(pixels)
@@ -159,32 +136,19 @@ def rgba_pillow_image_from_blender_image(blend_image: bpy.types.Image) -> PILIma
 
     return pillow_image_from_blender_image(blend_image)
 
-# TODO: Use numpy for transfer instead of saving a temp file and loading it
 def id_mask_from_blender_channels(channels: List[bpy.types.Image]) -> PackedChannelsType:
-    td = mkdtemp()
-    if True:
-        tdp = Path(td)
+    pillow_channels = [pillow_image_from_blender_image(channel) for channel in channels]
+    return IDMask.PackedChannels(pillow_channels)
 
-        channel_paths = [tdp / f"channel-{n+1}.png" for n in range(len(channels))]
-        for channel, channel_path in zip(channels, channel_paths):
-            channel.save(filepath=channel_path.as_posix())
+def id_mask_array_from_images(images: IDMaskImages) -> PackedChannelsType:
+    return id_mask_from_blender_channels(list(images))
 
-        mask = IDMask.from_channels_dir(tdp)
-        
-        return mask
-
-# TODO: Use numpy for transfer instead of saving a temp file and loading it
 def id_mask_from_blender_strip(strip: bpy.types.Image) -> PackedChannelsType:
     '''
         converts a blender strip into an IDMask with 2 layers. If the mask is square, 1 layer is assumed.
     '''
-    td = mkdtemp()
-    if True:
-        tdp = Path(td)
-
-        strip_path = tdp / "strip.png"
-        strip.save(filepath=strip_path.as_posix())
-
-        mask = IDMask.from_file(strip_path)
-
-        return mask.with_depth(8)
+    pillow_strip = pillow_image_from_blender_image(strip)
+    x,y = pillow_strip.size
+    n_layers = 1 if x == y else 2
+    mask = IDMask.from_strip(pillow_strip, n_layers)
+    return mask.with_depth(8)
