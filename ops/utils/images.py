@@ -1,6 +1,7 @@
 from typing import List, Callable, Tuple
 
 import bpy
+import numpy as np
 from bpy.path import abspath, relpath
 from bpy.types import ShaderNodeGroup
 from tempfile import mkdtemp
@@ -84,6 +85,7 @@ def load_blender_mask_image_from_path(path: Path) -> bpy.types.Image:
     im.colorspace_settings.name = "Non-Color" #type: ignore
     return im
 
+# TODO: Use numpy for transfer instead of saving a temp file and loading it
 def blender_image_from_pillow_image(image: PILImageType, name: str = "image") -> bpy.types.Image:
     td = mkdtemp()
     if True: 
@@ -93,6 +95,7 @@ def blender_image_from_pillow_image(image: PILImageType, name: str = "image") ->
 
         return load_blender_mask_image_from_path(image_path)
 
+# TODO: Use numpy for transfer instead of saving a temp file and loading it
 def make_id_mask_images(mask: PackedChannelsType, name: str) -> IDMaskImages:
     td = mkdtemp()
     # placeholder block for a `with TemporaryDirectory as td` statement. 
@@ -112,6 +115,7 @@ def make_id_mask_images(mask: PackedChannelsType, name: str) -> IDMaskImages:
 
     return images
 
+# TODO: Use numpy for transfer instead of saving a temp file and loading it
 def id_mask_array_from_images(images: IDMaskImages) -> PackedChannelsType:
     td = mkdtemp()
     # placeholder block for a `with TemporaryDirectory as td` statement. 
@@ -141,18 +145,12 @@ def pillow_image_from_blender_image(blend_image: bpy.types.Image) -> PILImageTyp
         4: "RGBA"
     }
 
-    iterable_image_pixels = blend_image.pixels[:] #type: ignore # This type is wrong. pixels is an iterable of float, not a float
-    pixels = (tuple(pixel) for pixel in batched(iterable_image_pixels, nchannels))
+    pixels = np.array(blend_image.pixels[:], dtype=np.float32) #type: ignore # This type is wrong. pixels is an iterable of float, not a float
+    pixels = (pixels * 255).astype(np.uint8)
+    pixels = pixels.reshape((dim_y, dim_x, nchannels))
+    pixels = np.flipud(pixels)
     
-    new_image = PILImage.new(channel_modes[nchannels], (dim_x,dim_y))
-    for y in reversed(range(dim_y)):
-        for x in range(dim_x):
-            pixel = tuple(int(c*255) for c in next(pixels))
-            if nchannels == 1:
-                pixel = pixel[0] # L mode expects int, not Tuple[int]
-
-            new_image.putpixel((x,y), pixel) # TODO: Using putpixel is slow. Prefer direct access if possible
-    
+    new_image = PILImage.fromarray(pixels, channel_modes[nchannels])
     return new_image
 
 def rgba_pillow_image_from_blender_image(blend_image: bpy.types.Image) -> PILImageType:
@@ -161,6 +159,7 @@ def rgba_pillow_image_from_blender_image(blend_image: bpy.types.Image) -> PILIma
 
     return pillow_image_from_blender_image(blend_image)
 
+# TODO: Use numpy for transfer instead of saving a temp file and loading it
 def id_mask_from_blender_channels(channels: List[bpy.types.Image]) -> PackedChannelsType:
     td = mkdtemp()
     if True:
@@ -173,7 +172,8 @@ def id_mask_from_blender_channels(channels: List[bpy.types.Image]) -> PackedChan
         mask = IDMask.from_channels_dir(tdp)
         
         return mask
-    
+
+# TODO: Use numpy for transfer instead of saving a temp file and loading it
 def id_mask_from_blender_strip(strip: bpy.types.Image) -> PackedChannelsType:
     '''
         converts a blender strip into an IDMask with 2 layers. If the mask is square, 1 layer is assumed.
