@@ -1,1 +1,1 @@
-from .sdf import sdf_channel_to_straight, channel_into_sdf
+from .sdf_jfa import sdf_channel_to_straight, channel_into_sdf
