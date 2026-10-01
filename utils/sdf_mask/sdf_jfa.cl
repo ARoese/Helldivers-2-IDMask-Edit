@@ -9,7 +9,7 @@ bool inside_shape(
 ) {
     float4 pix = read_imagef(binary_image, convert_int2(coordinate));
     float sample = (pix.x + pix.y + pix.z) / 3;
-    return sample > 0.5;
+    return sample >= 0.5;
 }
 
 int2 dim2d(__read_only const image2d_t binary_image) {

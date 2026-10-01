@@ -28,6 +28,15 @@ def context_kernel() -> Tuple[cl.Context, cl.Kernel, cl.Kernel, cl.Kernel]:
 
     return (ctx, init_knl, jfa_pass_knl, generate_image_knl)
 
+# Optimization notes:
+# Average total exec time: ~490ms
+# cl.create_image calls take ~150ms
+# queue takes ~130ms to complete (kernel execs and memory copies
+# match_dtype_to_c_struct takes ~200ms first time, then is negigable afterwards
+# rest is probably PIL conversion back to "L"
+# Ideal optimization target is probably vram memory usage. Reducing this will reduce bus contention 
+# The SDFPixel struct is A LOT bigger than it needs to be, especially since bools are actually ints for compat.
+# Estimated ~300MB minimum for a 4k image
 def channel_into_sdf(channel: PILImage, spread_factor: float = 0.0315) -> PILImage:
     if spread_factor < 0 or spread_factor > 1:
         raise ValueError(f"spread factor {spread_factor} outside range [0,1]")
@@ -96,7 +105,7 @@ def channel_into_sdf(channel: PILImage, spread_factor: float = 0.0315) -> PILIma
     return output_image
 
 def sdf_channel_to_straight(channel: PILImage, new_dim: Tuple[int,int]) -> PILImage:
-    return channel.resize(new_dim, resample=Image.Resampling.BILINEAR).point(lambda p: 255 if p > 126 else 0) # type: ignore
+    return channel.resize(new_dim, resample=Image.Resampling.BILINEAR).point(lambda p: 255 if p > 128 else 0) # type: ignore
 
 if __name__ == "__main__":
     import cProfile

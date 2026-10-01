@@ -57,7 +57,7 @@ def channel_into_sdf(channel: PILImage, spread_factor: float = 0.0315) -> PILIma
 
 def sdf_channel_to_straight(channel: PILImage, new_dim: Tuple[int,int]) -> PILImage:
     # TODO: This doesn't appear to produce good results
-    return channel.resize(new_dim, resample=Image.Resampling.BILINEAR).point(lambda p: 255 if p > 126 else 0) # type: ignore
+    return channel.resize(new_dim, resample=Image.Resampling.BILINEAR).point(lambda p: 255 if p > 128 else 0) # type: ignore
 
 if __name__ == "__main__":
     import cProfile
