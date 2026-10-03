@@ -1,4 +1,5 @@
 from typing import Tuple
+from pathlib import Path
 
 import bpy
 from bpy.types import Material
@@ -6,6 +7,63 @@ from bpy.types import ShaderNodeTexImage, ShaderNode
 from bpy.types import Image
 
 from .tree import trace_to_textures
+_SDK_MISSING_ERROR_STRING = "Helldivers 2 SDK is not installed, or it is unresolvably different. Create an issue on github or otherwise contact this addon's author. DO NOT CONTACT THE HELLDIVERS 2 SDK AUTHOR ABOUT THIS."
+
+def get_hd2_object_id(obj: bpy.types.Object) -> int | None:
+    try:
+        id_str: str = obj["Z_ObjectID"]
+        return int(id_str)
+    except:
+        print(f"Failed to find object ID of '{obj.name}'")
+        return None
+
+# reference operator definition
+# class ManuallyLoadArchivesOperator(Operator):
+# bl_label = "Load Archive By ID"
+# bl_idname = "helldiver2.archives_import_manual"
+# bl_description = "Loads Archive by Archive ID"
+#
+# archive_id: StringProperty(name="Archive ID")
+def load_archive(archive_id: int):
+    try:
+        archives_import_manual: bpy.types.Operator = bpy.ops.helldiver2.archives_import_manual #type: ignore
+    except:
+        raise Exception(_SDK_MISSING_ERROR_STRING)
+
+    # TODO: This has incorrect behvaior if you submit it in decimal. It appears to try to support 
+    # both hex and dec, but you need to submit hex without the 0x for it to work properly.
+    # A fix should be submitted upstream
+    archives_import_manual(archive_id=f"{archive_id:x}") # type: ignore
+
+# reference operator definition
+# import texture from archive button
+#class SaveTextureFromDDSOperator(Operator, ImportHelper):
+#    bl_label = "Import DDS"
+#    bl_idname = "helldiver2.texture_savefromdds"
+#    bl_description = "Override Current Texture with a Selected DDS File"
+#
+#    filter_glob: StringProperty(default='*.dds', options={'HIDDEN'})
+#    object_id: StringProperty(options={"HIDDEN"})
+#    def execute(self, context):
+#        if PatchesNotLoaded(self):
+#            return {'CANCELLED'}
+#        EntriesIDs = IDsFromString(self.object_id)
+#        for EntryID in EntriesIDs:
+#            SaveImageDDS(self.filepath, EntryID)
+#        
+#        # Redraw
+#        for area in context.screen.areas:
+#            if area.type == "VIEW_3D": area.tag_redraw()
+#
+#        return{'FINISHED'}
+def add_dds_to_patch(object_id: int, dds_path: Path):
+    try:
+        save_from_dds_operator: bpy.types.Operator = bpy.ops.helldiver2.texture_savefromdds #type: ignore
+    except:
+        raise Exception(_SDK_MISSING_ERROR_STRING)
+    
+    save_from_dds_operator(filepath=dds_path.as_posix(), object_id=f"{object_id}") # type: ignore
+
 
 # reference operator definition
 #class AddMaterialOperator(Operator):
@@ -34,9 +92,6 @@ from .tree import trace_to_textures
 
 # Armor LUT index: 8
 # Armor LUT definition: ("armorlut", "Armor LUT", "An advanced material using multiple mask textures and LUTs to texture the mesh only advanced users should be using this. Sourced from the base game material on Armors")
-
-_SDK_MISSING_ERROR_STRING = "Helldivers 2 SDK is not installed, or it is unresolvably different. Create an issue on github or otherwise contact this addon's author. DO NOT CONTACT THE HELLDIVERS 2 SDK AUTHOR ABOUT THIS."
-
 def poll_create_sdk_lut_material() -> str | None:
     try:
         # we know this exists because it's a dependency
