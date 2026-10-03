@@ -38,8 +38,8 @@ def context_kernel() -> Tuple[cl.Context, cl.Kernel, cl.Kernel, cl.Kernel]:
 # The SDFPixel struct is A LOT bigger than it needs to be, especially since bools are actually ints for compat.
 # Estimated ~300MB minimum for a 4k image
 def channel_into_sdf(channel: PILImage, spread_factor: float = 0.0315) -> PILImage:
-    if spread_factor < 0 or spread_factor > 1:
-        raise ValueError(f"spread factor {spread_factor} outside range [0,1]")
+    if spread_factor <= 0 or spread_factor > 1:
+        raise ValueError(f"spread factor {spread_factor} outside range (0,1]")
     ctx,init_knl, jfa_pass_knl, generate_image_knl = context_kernel()
     image_shapes = channel.size
     queue = cl.CommandQueue(ctx)
@@ -105,7 +105,7 @@ def channel_into_sdf(channel: PILImage, spread_factor: float = 0.0315) -> PILIma
     return output_image
 
 def sdf_channel_to_straight(channel: PILImage, new_dim: Tuple[int,int]) -> PILImage:
-    return channel.resize(new_dim, resample=Image.Resampling.BILINEAR).point(lambda p: 255 if p > 128 else 0) # type: ignore
+    return channel.resize(new_dim, resample=Image.Resampling.BILINEAR).point(lambda p: 255 if p > 127 else 0) # type: ignore
 
 if __name__ == "__main__":
     import cProfile
@@ -119,6 +119,10 @@ if __name__ == "__main__":
 
     empty_pixel_mask = IDMask.from_file(Path("test/empty_pixel.png"))
     empty_pixel_mask.downscale_sdf((128,128))
+
+    #blank_pm = Image.open(Path("test/blank-pm.png"))#.resize((128,128))
+    #channel_into_sdf(blank_pm).resize((128,128)).show()
+    
     test_id_mask = IDMask.from_strip(Image.open(Path("test/0xc89b26d36017d6e9.png")), 2)
     TARGET_MASK = 4
     original_channel = test_id_mask.channels[TARGET_MASK]

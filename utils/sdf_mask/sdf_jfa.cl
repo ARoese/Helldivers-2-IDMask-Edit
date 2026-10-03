@@ -195,12 +195,18 @@ __kernel void generate_image(
     };
 
     __global SDFPixel* target_pix = get_pixel(array, pix_coord);
-    float edge_distance = sqrt(uv_sq_dist(image_dim, pix_coord, target_pix->nearest_edge));
+    // If the pixel is uninitialized, make it black
+    float pix_val = 0.0;
+    if(target_pix->initialized){ 
+        float edge_distance = sqrt(uv_sq_dist(image_dim, pix_coord, target_pix->nearest_edge));
 
-    // we want boundary pixels to equal 0.5, with inner pixels being higher
-    // and outer pixel being lower
-    float distance_ratio = edge_distance / (max_distance*2);
-    float pix_val = target_pix->inside_shape ? 0.5f + distance_ratio : 0.5f - distance_ratio;
-    pix_val = clamp(pix_val, 0.0f, 1.0f);
+        // we want boundary pixels to equal 0.5, with inner pixels being higher
+        // and outer pixel being lower
+        float distance_ratio = edge_distance / (max_distance*2);
+        float midpoint = 128.0 / 255.0;
+        pix_val = target_pix->inside_shape ? midpoint + distance_ratio : midpoint - distance_ratio;
+        pix_val = clamp(pix_val, 0.0f, 1.0f);
+    }
+
     write_imagef(sdf_image, pix_coord, pix_val);
 }
