@@ -1,6 +1,7 @@
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import List, Literal, Tuple, Self
 import pprint
+import tempfile
 
 import bpy
 from bpy.types import Context, Event
@@ -109,6 +110,24 @@ class AtlasPieces:
 
         self.obj.material_slots[0].material = lut_material
 
+    def unpack(self):
+        def ensure_unpacked(img: Image|None):
+            if img is None:
+                return
+
+            temp_dir = Path(tempfile.gettempdir())
+            fp = img.filepath_raw
+            if img.packed_file is not None or fp is None or not bool(fp.strip()) or PurePosixPath(fp).is_relative_to(temp_dir):
+                img.unpack(method="WRITE_LOCAL")
+            print("filepath after unpacking: ", img.filepath)
+            ensure_not_unpacked_exr(img)
+
+        ensure_unpacked(self.pattern_mask)
+        ensure_unpacked(self.normal)
+        ensure_unpacked(self.decal)
+        ensure_unpacked(self.pattern_lut)
+
+
 def from_bpy_obj(obj: bpy.types.Object, sdf_downscale_target: int | None) -> AtlasPieces:
     mg = accurate_shader.find_main_group(obj)
     if mg is None:
@@ -165,22 +184,6 @@ def from_bpy_obj(obj: bpy.types.Object, sdf_downscale_target: int | None) -> Atl
             pm_pil = image_utils.pillow_image_from_blender_image(pattern_mask)
             pm_sdf = sdf_mask.channel_into_sdf(pm_pil).resize((sdf_downscale_target, sdf_downscale_target))
             pattern_mask = image_utils.blender_image_from_pillow_image(pm_sdf, name=f"{obj.name}-cm-pattern-mask")
-            pattern_mask.name = "complex merge pattern mask"
-            pattern_mask.pack()
-    
-    def ensure_unpacked(img: Image|None):
-        if img is None:
-            return
-        
-        if img.packed_file is not None:
-            img.unpack(method="WRITE_LOCAL")
-        print("filepath after unpacking: ", img.filepath)
-        ensure_not_unpacked_exr(img)
-    
-    ensure_unpacked(pattern_mask)
-    ensure_unpacked(normal)
-    ensure_unpacked(decal)
-    ensure_unpacked(pattern_lut)
 
     #normal.save(Path("test_outputs/example_normal.png"))
     res: AtlasPieces = AtlasPieces(obj, id_mask, pattern_mask, primary_lut, secondary_lut, normal, decal, pattern_lut)

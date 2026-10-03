@@ -76,14 +76,15 @@ class ComplexMerge(bpy.types.Operator):
         if len(object_luts) == 0 and self.add_lut_to_patch:
             raise Exception("Could not find any material LUTs to replace. Copy helldivers 2 custom properties to one of your objects or uncheck the 'Add LUT to patch' checkbox.")
             
-        # largest_pattern_mask_dim = max(piece[2].size[0] for piece in pieces)
         sdf_downscale_target = self.sdf_downscale_target if self.to_sdf else None
         pieces = [atlas_pieces.from_bpy_obj(obj, sdf_downscale_target) for obj in objects]
         assert len(pieces) == len(objects)
 
+        output_dir = Path(self.directory)
+        for piece in pieces:
+            piece.unpack()
         shared_primary_lut = atlas_pieces.atlas_luts(pieces)
 
-        output_dir = Path(self.directory)
         shared_primary_lut_path = output_dir / f"{ao.name}-primary-lut-atlas.dds"
         with open(shared_primary_lut_path, 'wb') as out_file:
             out_file.write(shared_primary_lut.to_dds().getbuffer())
