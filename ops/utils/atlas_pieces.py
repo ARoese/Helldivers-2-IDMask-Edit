@@ -8,7 +8,7 @@ from bpy.types import Context, Event
 from PIL import Image as PILImage
 from PIL.Image import Image as PILImageType
 
-from .images import lut_from_blender_image, ensure_not_unpacked_exr
+from .images import lut_from_blender_image
 from . import accurate_shader
 from . import images as image_utils
 from .custom_types import *
@@ -29,7 +29,7 @@ class AtlasPieces:
     secondary_lut: LUTType
     normal: Image
     decal: Image | None
-    pattern_lut: Image | None
+    pattern_lut: LUTType | None
 
     def __init__(
             self,
@@ -40,7 +40,7 @@ class AtlasPieces:
             secondary_lut: LUTType, 
             normal: Image, 
             decal: Image | None, 
-            pattern_lut: Image | None
+            pattern_lut: LUTType | None
         ):
         self.obj = obj
         self.id_mask = id_mask
@@ -97,11 +97,18 @@ class AtlasPieces:
 
         extended_id_mask_img = bpy.data.images.load(id_mask_path.as_posix(), check_existing=False)
 
+        pattern_lut_path = output_dir / f"{self.obj.name}-pattern-lut.dds"
+        pattern_lut = None
+        if self.pattern_lut is not None:
+            with open(pattern_lut_path, 'wb') as out_file:
+                out_file.write(self.pattern_lut.to_dds().getbuffer())
+            pattern_lut = bpy.data.images.load(pattern_lut_path.as_posix(), check_existing=False)
+
         lut_material = create_sdk_lut_material()
         setup_sdk_lut_material(
             lut_material,
             self.decal,
-            self.pattern_lut,
+            pattern_lut,
             self.normal,
             self.pattern_mask,
             extended_id_mask_img,
@@ -111,6 +118,11 @@ class AtlasPieces:
         self.obj.material_slots[0].material = lut_material
 
     def unpack(self):
+        # NOTE: Spaghetti.
+        # The gist here is that the normal is never none, but the other 2 are.
+        # Each file needs to be unpacked, but if a file is an EXR then it needs to be converted to
+        # a png. The exr -> png conversion should create a new Image, rather than just changing
+        # the filepath
         def ensure_unpacked(img: Image|None):
             if img is None:
                 return
@@ -120,12 +132,21 @@ class AtlasPieces:
             if img.packed_file is not None or fp is None or not bool(fp.strip()) or PurePosixPath(fp).is_relative_to(temp_dir):
                 img.unpack(method="WRITE_LOCAL")
             print("filepath after unpacking: ", img.filepath)
-            ensure_not_unpacked_exr(img)
 
-        ensure_unpacked(self.pattern_mask)
+        def handle_unpack(img: Image|None) -> Image|None:
+            if img is None:
+                return img
+            
+            if img.file_format == "OPEN_EXR":
+                return image_utils.convert_exr_image(img)
+            else:
+                ensure_unpacked(img)
+                return img
+
+
+        self.pattern_mask = handle_unpack(self.pattern_mask)
         ensure_unpacked(self.normal)
-        ensure_unpacked(self.decal)
-        ensure_unpacked(self.pattern_lut)
+        self.decal = handle_unpack(self.decal)
 
 
 def from_bpy_obj(obj: bpy.types.Object, sdf_downscale_target: int | None) -> AtlasPieces:
@@ -168,6 +189,8 @@ def from_bpy_obj(obj: bpy.types.Object, sdf_downscale_target: int | None) -> Atl
     print("Loading LUTs")
     primary_lut = lut_from_blender_image(primary_lut_node.image)
     secondary_lut = lut_from_blender_image(secondary_lut_node.image)
+    if pattern_lut is not None:
+        pattern_lut = lut_from_blender_image(pattern_lut)
     print("done Loading LUTs")
     
     normal = normal_node.image

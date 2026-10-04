@@ -3,11 +3,10 @@ from typing import List, Literal, Tuple, Self
 
 import bpy
 from bpy.types import Context, Event
-from PIL import Image as PILImage
-from PIL.Image import Image as PILImageType
 from .utils import atlas_pieces
 from .utils.custom_types import *
-from .utils.sdk_material_interface import poll_create_sdk_lut_material
+from .utils import sdk_material_interface
+from ..utils import customization_armor_sets
 
 class AccurateToSDK(bpy.types.Operator):
     bl_idname = "hd2visual.accurate_to_sdk"
@@ -28,13 +27,18 @@ class AccurateToSDK(bpy.types.Operator):
 
     to_sdf: bpy.props.BoolProperty(default=False, name="as SDF", description="Export to a SDF at a lower resolution. See the README to understand what this means.") #type: ignore
     sdf_downscale_target: bpy.props.IntProperty(name="SDF resolution", default=256, min=32, description="The resolution of the exported SDF.") #type: ignore
+    add_lut_to_patch: bpy.props.BoolProperty(
+        name="Add LUT to patch",
+        default=True, 
+        description="Attempt to identify the object(s) being merged via HD2 custom properties, and automatically replace the correct LUT with the generated atlas"
+    ) #type: ignore
 
     def draw(self, context):
         layout = self.layout
         assert layout is not None
 
         layout.label(text="Select a directory to export the assets to", icon='INFO')
-        
+        layout.prop(self, "add_lut_to_patch")
         layout.prop(self, "to_sdf")
         if self.to_sdf:
             layout.prop(self, "sdf_downscale_target")
@@ -55,7 +59,6 @@ class AccurateToSDK(bpy.types.Operator):
         objects.remove(ao)
         objects = [ao, *objects]
 
-        # largest_pattern_mask_dim = max(piece[2].size[0] for piece in pieces)
         sdf_downscale_target = self.sdf_downscale_target if self.to_sdf else None
         pieces = [atlas_pieces.from_bpy_obj(obj, sdf_downscale_target) for obj in objects]
         assert len(pieces) == len(objects)
@@ -68,10 +71,25 @@ class AccurateToSDK(bpy.types.Operator):
                 out_file.write(piece.primary_lut.to_dds().getbuffer())
             
             shared_primary_lut = bpy.data.images.load(primary_lut_path.as_posix(), check_existing=False)
+            if self.add_lut_to_patch:
+                object_id = sdk_material_interface.get_hd2_object_id(piece.obj)
+                if object_id is None:
+                    raise Exception(f"Could not find object ID for '{piece.obj.name}'. Copy helldivers 2 custom properties to one of your objects or uncheck the 'Add LUT to patch' checkbox.")
+                lut_id = customization_armor_sets.find_lut_for_obj(object_id)
+                if lut_id is None:
+                    raise Exception(f"Could not find material LUT for object ID 0x{object_id:x} ({object_id})")
+                archive_id, lut_id = lut_id
+
+                # attempt to automatically add the shared LUT to the patch
+                print(f"LUT for object 0x{object_id:x} ({object_id}) is 0x{lut_id:x} ({lut_id}) in archive 0x{archive_id:x}")
+                print(f"loading archive 0x{archive_id:x}")
+                sdk_material_interface.load_archive(archive_id)
+                print(f"Adding LUT atlas to patch as 0x{lut_id:x}")
+                sdk_material_interface.add_dds_to_patch(lut_id, primary_lut_path)
+                
+            piece.unpack()
             piece.apply_sdk_material(shared_primary_lut, output_dir)
 
-        # Let the user do this themselves. That way, they can decide what needs to be part of what unit
-        #bpy.ops.object.join()
         return {'FINISHED'}
 
     @classmethod
@@ -83,7 +101,7 @@ class AccurateToSDK(bpy.types.Operator):
             cls.poll_message_set("All selected objects need meshes")
             return False
         
-        if (reason := poll_create_sdk_lut_material()) is not None:
+        if (reason := sdk_material_interface.poll_create_sdk_lut_material()) is not None:
             cls.poll_message_set(reason)
             return False
         

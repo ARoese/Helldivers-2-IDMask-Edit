@@ -8,10 +8,9 @@ from PIL.Image import Image as PILImageType
 from .utils import atlas_pieces
 from .utils.custom_types import *
 from .utils import sdk_material_interface
+from .utils import images as image_util
 from ..utils import customization_armor_sets
 
-# TODO: This is creating images (normals, etc) with broken empty paths. The issue does not become apparent until the SECOND time a merge is performed.
-# TODO: It is probably related to the ensure_not_unpacked_exr code, but not sure
 class ComplexMerge(bpy.types.Operator):
     bl_idname = "hd2visual.complex_merge"
     bl_label = "Complex Merge"
@@ -81,8 +80,6 @@ class ComplexMerge(bpy.types.Operator):
         assert len(pieces) == len(objects)
 
         output_dir = Path(self.directory)
-        for piece in pieces:
-            piece.unpack()
         shared_primary_lut = atlas_pieces.atlas_luts(pieces)
 
         shared_primary_lut_path = output_dir / f"{ao.name}-primary-lut-atlas.dds"
@@ -92,6 +89,7 @@ class ComplexMerge(bpy.types.Operator):
         shared_primary_lut = bpy.data.images.load(shared_primary_lut_path.as_posix(), check_existing=False)
 
         for piece in pieces:
+            piece.unpack()
             piece.apply_sdk_material(shared_primary_lut, output_dir)
 
         # attempt to automatically add the shared LUT to the patch

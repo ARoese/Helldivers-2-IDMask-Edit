@@ -9,6 +9,7 @@ from pathlib import Path
 from pathlib import PurePosixPath
 from PIL import Image as PILImage
 from PIL.Image import Image as PILImageType
+import re
 
 from .custom_types import *
 from ...utils import IDMask
@@ -22,33 +23,15 @@ from ...utils import env
 import itertools
 
 # TODO: Some of these functions are quite slow on large images. 4K is about the upper limit of usability. Improve this.
+def convert_exr_image(image: Image) -> Image:
+    if image.file_format != "OPEN_EXR":
+        raise ValueError(f"Image '{image.name}' is not exr, so cannot convert it")
 
-def ensure_not_unpacked_exr(img: Image):
-    if img.packed_file is not None:
-        raise ValueError(f"Expected packed image. Given image {img.name} was not packed.")
-    
-    path = img.filepath_raw
-    if ".exr" not in path:
-        return
-    
-    path = Path(abspath(path))
-    res = None
-    try:
-        res = subprocess.run([env.TEXCONV_BIN.as_posix(), "-ft", "dds", "-y", "-dx10", "-o", path.parent, "--", path.as_posix()], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        res.check_returncode()
-    except Exception as e:
-        out = res.stdout if res is not None else b"[No output]"
-        out = out.decode()
-        raise Exception(f"texconv failed:\n{out}") from e
-    
-    dds_path = path.with_suffix(".dds")
-    if not dds_path.exists():
-        raise Exception(f"texconv did not fail, but the file {dds_path.as_posix()} still does not exist")
-    
-    # do this so that relative/non-relative status is not affected
-    img.filepath_raw = relpath(PurePosixPath(img.filepath_raw).with_suffix(".dds").as_posix())
-    img.name = img.name.replace(".exr", ".dds")
-
+    safe_filename = re.sub(r'[^\w]', '_', image.name)
+    fp = f"//textures/generated/{safe_filename}.png"
+    # saving a copy of an image without is a bit annoying in bpy. Just use PIL
+    pillow_image_from_blender_image(image).save(abspath(fp))
+    return bpy.data.images.load(fp, check_existing=False)
 
 def lut_from_blender_image(image: Image) -> LUTType:
     iterable_image_pixels = image.pixels[:] #type: ignore # This type is wrong. pixels is an iterable of float, not a float
