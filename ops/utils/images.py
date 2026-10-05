@@ -30,7 +30,16 @@ def convert_exr_image(image: Image) -> Image:
     safe_filename = re.sub(r'[^\w]', '_', image.name)
     fp = f"//textures/generated/{safe_filename}.png"
     # saving a copy of an image without is a bit annoying in bpy. Just use PIL
-    pillow_image_from_blender_image(image).save(abspath(fp))
+    # Sometimes there are 1x1 blank pixels. 
+    # This works in blender, but can cause issues in patches.
+    # resize them to 256x256 minimum to ensure stability
+    from_blender = pillow_image_from_blender_image(image)
+    if from_blender.size[0] < 256 or from_blender.size[1] < 256:
+        print(f"WARNING: while converting to EXR, discovered that image '{image.name}' is a {image.size[0]}x{image.size[1]} image. Upscaling to 256x256 for safety.")
+        from_blender = from_blender.resize((256,256))
+    save_path = Path(abspath(fp))
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    from_blender.save(save_path)
     return bpy.data.images.load(fp, check_existing=False)
 
 def lut_from_blender_image(image: Image) -> LUTType:

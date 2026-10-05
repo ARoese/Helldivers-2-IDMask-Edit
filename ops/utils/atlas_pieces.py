@@ -130,6 +130,12 @@ class AtlasPieces:
             temp_dir = Path(tempfile.gettempdir())
             fp = img.filepath_raw
             if img.packed_file is not None or fp is None or not bool(fp.strip()) or PurePosixPath(fp).is_relative_to(temp_dir):
+                # Sometimes there are 1x1 blank pixels. 
+                # This works in blender, but can cause issues in patches.
+                # resize them to 256x256 minimum to ensure stability
+                if img.size[0] == 1 or img.size[1] == 1:
+                    print(f"WARNING: Discovered that image '{img.name}' is a {img.size[0]}x{img.size[1]} image. Upscaling to 256x256 for safety.")
+                    img.scale(256, 256)
                 img.unpack(method="WRITE_LOCAL")
             print("filepath after unpacking: ", img.filepath)
 
@@ -142,7 +148,6 @@ class AtlasPieces:
             else:
                 ensure_unpacked(img)
                 return img
-
 
         self.pattern_mask = handle_unpack(self.pattern_mask)
         ensure_unpacked(self.normal)

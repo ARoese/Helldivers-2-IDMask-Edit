@@ -138,8 +138,8 @@ HD2 always interprets the mask textures it loads as Signed Distance Fields, (SDF
 > Conversion to and from an SDF is not lossless. You should always retain a high-resolution version of the mask, and export a low resolution SDF that you add to a patch.
 
 ### Asset Merging
-Objects using the accurate shader can be merged. This will combine the primary and secondary LUTs of the merged objects, and stack the IDMasks to conform with those new LUTs. This is required because armor primary LUTs are hard-coded. Even when using multiple armor lut materials on a single armor, they are all hard-coded to use the same primary LUT. This merging process produces a valid shared primary LUT and IDMasks that correctly index into it.
-The secondary LUTs aren't useful, but they are merged anyways in case more is learned about them. These merged objects do **NOT** respect other LUT edit mods, but they will have blood and gunk visible.
+Objects using the accurate shader can be merged. This will combine the primary and secondary LUTs of the merged objects, and stack the IDMasks to conform with those new LUTs. This is required because armor primary LUTs are hard-coded. Even when using multiple armor lut materials on a single armor piece, they are all hard-coded to use the same primary LUT. This merging process produces a valid shared primary LUT and IDMasks that correctly index into it.
+The secondary LUTs were previously also merged, but they aren't anymore. You should assume the generated secondary LUT is invalid. These merged objects do **NOT** respect other LUT edit mods, but they will have blood and gunk visible.
 
 > [!TIP]
 > Accurate shader materials that have been modified for IDMask painting (described in the above section) will work seamlessly here. You **DON'T** need to create a new one that used the produced dds file directly.
@@ -165,7 +165,7 @@ The secondary LUTs aren't useful, but they are merged anyways in case more is le
 
 An SDK-compatible armor LUT material is created for each object, with IDMasks that index into the generated shared LUT stack. The relevant inputs are also wired up automatically. 
 
-\* You can merge these objects normally using ctrl+J in order to corral them into one or more units as you see fit. These LUT materials will not conflict with each other when multiple are applied to a single unit. Which objects are grouped together into which unit, or how many units, depends on how you want to make your mod. For example, if you kitbash an LUT ammo bag onto your right shoulder, and one onto your left leg, then all the bags and the limbs need to be merged together all at once to generate the correct LUT offsets. However, you probably don't want a single wonky "left leg right arm bag1 bag2" unit in your patch. Your best option here to to ctrl+j merge the leg and its ammo bag, then ctrl+j merge the arm and its ammo bag separately. This will result in 2 objects (your legs unit and your right arm unit) which both have 2 LUT materials. (1 for the limb, and 1 for the bag) Then, you can save those units individually and they will all still behave as expected when the global armor primary LUT is imposed on them. 
+\* You can merge these objects normally using ctrl+J in order to corral them into one or more units as you see fit. These LUT materials will not conflict with each other when multiple are applied to a single unit. Which objects are grouped together into which unit, or how many units, depends on how you want to make your mod. For example, if you kitbash an LUT ammo bag onto your right shoulder, and one onto your left leg, then all the bags and the limbs need to be merged together all at once to generate the correct LUT offsets. However, you probably don't want a single wonky "left leg right arm bag1 bag2" unit in your patch. Your best option here to to ctrl+j merge the leg and its ammo bag, then ctrl+j merge the arm and its ammo bag separately. This will result in 2 objects (your legs unit and your right arm unit) which both have 2 LUT materials. (1 for the limb, and 1 for the bag) Then, you can save those units individually and they will all still behave as expected when the armor piece primary LUT is imposed on them. 
 
 2 files are placed into the selected output folder, where OBJECT_NAME is the name of the active object:
 - `OBJECT_NAME-primary-lut-atlas.dds`: primary lut stack
@@ -173,8 +173,9 @@ An SDK-compatible armor LUT material is created for each object, with IDMasks th
 Additionally, an id mask array is created for each merged object. They are named as `OBJECT_NAME-idmask.dds`. The armor LUT materials are automatically wired up using the textures in the accurate shader. Files were automatically converted as necessary.
 
 6. If you are producing an armor, (you probably are) then **also** replace that armor's primary LUT with the LUT atlas (`OBJECT_NAME-primary-lut-atlas.dds`) in the patch, because that is hard-coded.
-    - This overwrites the primary LUT for that entire armor set, and thus will affect other pieces of your armor. If you made sure that your active object selected
-    in step 1 would also uses that armor's primary LUT, then the first 8 rows of the primary LUT atlas will be the armor set's entire primary LUT. The result is that 
+    - By default, this is done for you automatically at the end of the merge. There is very little reason not to do this, but you can disable it when picking your merge output folder.
+    - This overwrites the primary LUT for that armor piece, and thus can affect other pieces of your armor. If you made sure that your active object selected
+    in step 1 would also uses that armor's primary LUT, then the first 8 rows of the primary LUT atlas will be the armor piece's entire primary LUT. The result is that 
     "dumb" armor pieces with only 8-channel IDMasks will still use only those rows, and your extra LUT rows are hidden away from them using IDMask channels they lack.
     - TL;DR: Make sure your active object in step 1 is something that already exists in the destination armor, or it will break everything sharing that LUT!
 
@@ -190,15 +191,19 @@ A: Re-import and check "is SDF" in the file picker dialogue. Also see [What is a
 Q: After merging units, one of them has a messed up IDMask.
 A: Check the IDMask of that unit. If it is square and not a single-channel IDMask, then you should export the dds version, then import that on the Accurate Shader. The addon has no reliable way to determine the number of layers in a png strip, and sometimes its best guess will be wrong.
 
+Q: My game crashes on start
+A: ctrl+f "crash" in this file and check for various causes for this. HD2 is finnickey, but it's primarily a texture resolution issue that will cause this.
+
 ## Known Issues
 - When performing a merge operation, if any of the relevant textures is a data block with a broken link, (it is an external or linked image, and that link is broken) then blender will hang and just eat ram. This can happen sometimes when using arsenal shaders that have been appended from another blend file. If your material looks broken, then merging with it might fail!
 - Performing the merge operation on copies of objects can break the originals. This obstructs a workflow that involves merging once and just always adding that to the patch while maintaining un-merged copies of the constituent objects in case changes want to be made later. My recommendation is to use asset merging as a step of making your patch, which will be intentionally not saved.
-- Some accurate shader exports contain image files that can't be unpacked, and permanently have empty filepaths. These cause unhelpful `Exception: Could not find file at path: `<sup>[sic]</sup> errors from the SDK when you save a unit after merging. These are often normal maps and pattern mask LUTs. 
+- When creating a material, the SDK unpacks the entire blend file and shreds many packed files in the process. If this issue has already been resolved by [my PR](https://github.com/Boxofbiscuits97/HD2SDK-CommunityEdition/pull/128), then this will no longer occur. However, broken textures may persist from old projects. These cause unhelpful `Exception: Could not find file at path: `<sup>[sic]</sup> errors from the SDK when you save a unit after merging. These are often normal maps and pattern mask LUTs. 
     1. After merging, open the Shading workspace and check each of the resulting materials. 
     2. Click each texture node in the material to bring up its image in the image editor on the left side. Make sure the side bar in the image editor is expanded. 
     3. In the `Image` section of the sidebar, under the `Image` dropdown, there should be a file path that looks something like `//textures/my_image.extension` as part of a file selector. 
     4. If that is not present, then that image is affected by the empty path issue. Take note of what texture it is, and fix it on the pre-merge accurate shader material by saving the image to a real file, then replacing it with that file via `Image Editor > Hamburger Menu > Image > Replace...`.
-        - You should perform this fix on the accurate shader material to ensure that you do not need to fix it repeatedly each time you merge with that material. The merge and save process does not create these weird textures, it just reveals them.
+        - You should perform this fix on the accurate shader material to ensure that you do not need to fix it repeatedly each time you merge with that material. The merge and save process does not create these broken textures, it just reveals them.
+- Some 1x1 images used as placeholders cause HD2 to crash on windows specifically when they make their way into patches. This addon will do its best to catch and upscale these images, but you should check for them and warnings about them if your patches are crashing on start.
 
 ## Reporting Issues
 If you encounter issues or need help, you can either open an issue on github or contact me (@DrLong) in the [Helldivers 2 Modding Community discord server](https://discord.gg/ZwjPaZNwH7). Make sure you ping me, because I probably won't see it otherwise.
