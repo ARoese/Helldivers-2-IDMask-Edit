@@ -9,8 +9,8 @@ from pathlib import Path
 
 bl_info = {
     "name": "HD2 LUT Visual Edit",
-    "blender": (4, 3, 0),
-    "version": (1, 7, 0),
+    "blender": (4, 3, 1),
+    "version": (1, 7, 1),
     "category": "Material",
 }
 
