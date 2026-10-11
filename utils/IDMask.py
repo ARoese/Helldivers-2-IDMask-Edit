@@ -107,16 +107,20 @@ class PackedChannels:
             if not output_path.exists():
                 raise MaskSplitException(f"texassemble output '{output_path.as_posix()}' does not exist!")
 
-            # TODO: Make sure that helldivers can load IDMasks in BC7_UNORM format
-            res = None
-            try:
-                args = [env.TEXCONV_BIN.as_posix(), "-y", "-f", "BC7_UNORM", "-ft", "DDS", "-dx10", "-o", tmpdir.as_posix(), "--", output_path.as_posix()]
-                res = subprocess.run(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-                res.check_returncode()
-            except Exception as e:
-                out = res.stdout if res is not None else b"[No output]"
-                out = out.decode()
-                raise MaskSplitException(f"texconv failed:\n{out}") from e
+            # helldivers can load IDMasks in BC7_UNORM format, but NVIDIA GPUs cannot write it properly on windows.
+            # I don't know if it's a driver issue, but creating BC7_UNORM dds images on windows using a 3060 and 3080
+            # results in mesh faces rendering fine up close, then drawing as if they were painted with IDMask 0 at higher
+            # distances. It's hard to figure this one out, so just leave compression off; it's not worth the headache, even if
+            # it does halve the dds size.
+            #res = None
+            #try:
+            #    args = [env.TEXCONV_BIN.as_posix(), "-y", "-f", "BC7_UNORM", "-ft", "DDS", "-dx10", "-o", tmpdir.as_posix(), "--", output_path.as_posix()]
+            #    res = subprocess.run(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+            #    res.check_returncode()
+            #except Exception as e:
+            #    out = res.stdout if res is not None else b"[No output]"
+            #    out = out.decode()
+            #    raise MaskSplitException(f"texconv failed:\n{out}") from e
             
             if not output_path.exists():
                 raise MaskSplitException(f"texconv output '{output_path.as_posix()}' does not exist!")
