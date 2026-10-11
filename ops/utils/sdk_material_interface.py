@@ -3,7 +3,7 @@ from pathlib import Path
 
 import bpy
 from bpy.types import Material
-from bpy.types import ShaderNodeTexImage, ShaderNode
+from bpy.types import ShaderNodeTexImage, ShaderNode, ShaderNodeGroup
 from bpy.types import Image
 
 from .tree import trace_to_textures
@@ -122,10 +122,11 @@ def create_sdk_lut_material() -> Material:
     raise Exception("sdk material creation failed")
 
 def _is_main_node(node: ShaderNode) -> bool:
-    input_names = set(inp.name for inp in node.inputs)
-    for indicator_name in ["Decal", "Pattern LUT", "Normal", "Pattern Mask", "ID Mask Array", "Primary LUT"]:
-        if indicator_name not in input_names:
-            return False
+    if not isinstance(node, ShaderNodeGroup) or node.node_tree is None:
+        return False
+
+    if "armorlut" not in node.node_tree.name:
+        return False
     
     return True
 
@@ -150,12 +151,14 @@ def setup_sdk_lut_material(
     
     if main_node is None:
         raise Exception("Failed to find lut material's main node")
+
     
     for image, dest_node_name in [
         (decal, "Decal"),
         (pattern_lut, "Pattern LUT"),
         (normal, "Normal"),
-        (pattern_mask, "Pattern Mask"),
+        (pattern_mask, "Pattern Mask"), # One of these will work, dependening on SDK version
+        (pattern_mask, "Pattern Mask Array"),
         (id_mask_array, "ID Mask Array"),
         (primary_lut, "Primary LUT")
         ]:
@@ -164,8 +167,15 @@ def setup_sdk_lut_material(
 
         if image.packed_file is not None:
             raise Exception("Cannot use packed file in lut material")
-        
-        tttr = trace_to_textures(main_node.inputs[dest_node_name])
+
+        try:
+            inp = main_node.inputs[dest_node_name]
+        except:
+            if image is pattern_mask:
+                continue
+            else:
+                raise
+        tttr = trace_to_textures(inp)
         if not tttr:
             raise Exception(f"Failed to trace to texture for input node {dest_node_name}")
         
