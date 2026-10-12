@@ -45,6 +45,8 @@ class LUTRowsDir:
     def rows(self) -> List[str]:
         return [p.stem for p in self.dir.iterdir() if p.suffix.lower() == ".dds"]
 
+# Directory in which 23-column LUTs are stored.
+# This should NOT be used for LUTs of other dimensions. For those, make a different subfolder.
 SAVED_ROWS_DIR_23=LUTRowsDir(ADDON_DIR / "saved_data" / "LUT" / "23")
 # TODO: Make LUT row saving and such also work in the image viewer, not just 3d view
 class SaveNewLUTRow(bpy.types.Operator):

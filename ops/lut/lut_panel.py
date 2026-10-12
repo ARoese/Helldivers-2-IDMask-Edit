@@ -3,7 +3,7 @@ from typing import Literal
 import bpy
 from bpy.types import Context
 from .properties import BPYLUTBridge, LUTProperty, LUTPixelProperty
-from .ui import draw_lut_pixel
+from .ui import draw_lut_pixel, draw_lut_user_friendly, draw_lut_row_legacy
 from .util import is_LUT_image
 from ..utils import accurate_shader
 
@@ -11,18 +11,13 @@ from . import saved_rows
 
 def panel_draw(layout: bpy.types.UILayout, bridge: BPYLUTBridge):
     col = layout.column(align=True)
+    col.prop(bridge.lut_property, "use_legacy_layout")
     col.prop(bridge.lut_property, "selected_row")
 
-    def draw_lut_row(col: bpy.types.UILayout, row_index: int):
-        x_dim,y = bridge.lut.dim()
-        for x in range(x_dim):
-            pixel_index = x_dim*row_index+x
-            pixel = bridge.lut_property.lut[pixel_index]
-            
-            draw_lut_pixel(col, pixel, x+1)
-            #draw_lut_color_with_alpha_slider(col, pixel)
-
-    draw_lut_row(col, bridge.lut_property.selected_row-1)
+    if bridge.lut_property.use_legacy_layout:
+        draw_lut_row_legacy(col, bridge)
+    else:
+        draw_lut_user_friendly(col, bridge)
 
 class LUTEditPanelIMEditor(bpy.types.Panel):
     """Creates a Panel in the Image Editor"""

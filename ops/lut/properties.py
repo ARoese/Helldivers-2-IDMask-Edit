@@ -108,7 +108,7 @@ class LUTPixelProperty(bpy.types.PropertyGroup):
     ) # type: ignore
 
     bump_map_index_enum: bpy.props.EnumProperty(
-        name="Bump Map",
+        name="Detail Map",
         items=BumpMap.values(),
         set=set_bmi,
         get=get_bmi
@@ -145,6 +145,11 @@ class LUTProperty(bpy.types.PropertyGroup):
     lut: bpy.props.CollectionProperty(
         type=LUTPixelProperty, # type: ignore
         name="pixels",
+    ) # type: ignore
+
+    use_legacy_layout: bpy.props.BoolProperty(
+        default=False,
+        name="Use Legacy Layout"
     ) # type: ignore
 
     def clamped_set(self, v):
