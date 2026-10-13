@@ -184,6 +184,19 @@ class PackedChannels:
             extra = [Image.new("L", self.dim()) for _ in range(diff)]
             return PackedChannels([*self.channels, *extra])
 
+    def top_layer_at(self, uv: Tuple[float, float]) -> int:
+        channels_enumerated = list(enumerate(self.channels))
+        for idx, channel in reversed(channels_enumerated):
+            mask_size_x, mask_size_y = channel.size
+            pix_x = int(mask_size_x*uv[0])
+            pix_y = int(mask_size_y*(1 - uv[1])) # blender to pillow coordinate space conversion
+            val = channel.getpixel((pix_x, pix_y))
+            assert isinstance(val, int)
+            if val > 126:
+                return idx
+
+        return 0
+
 
 def empty_channel_pack(depth: int, dim: Tuple[int, int]) -> PackedChannels:
     channels = [Image.new(mode="L", size=dim) for _ in range(depth)]

@@ -6,13 +6,16 @@ from .properties import BPYLUTBridge, LUTProperty, LUTPixelProperty
 from .ui import draw_lut_pixel, draw_lut_user_friendly, draw_lut_row_legacy
 from .util import is_LUT_image
 from ..utils import accurate_shader
+from .selector_modal import LUTSelectionModalOperator
 
 from . import saved_rows
 
 def panel_draw(layout: bpy.types.UILayout, bridge: BPYLUTBridge):
     col = layout.column(align=True)
     col.prop(bridge.lut_property, "use_legacy_layout")
-    col.prop(bridge.lut_property, "selected_row")
+    row = col.row()
+    row.operator(LUTSelectionModalOperator.bl_idname, icon='EYEDROPPER', text="")
+    row.prop(bridge.lut_property, "selected_row")
 
     if bridge.lut_property.use_legacy_layout:
         draw_lut_row_legacy(col, bridge)
@@ -159,7 +162,7 @@ class ExportLUTOperator(bpy.types.Operator):
         return True
 
 
-CLASSES = [LUTPixelProperty, LUTProperty, LUTEditPanelIMEditor, LUTEditPanel3D, ExportLUTOperator]
+CLASSES = [LUTPixelProperty, LUTProperty, LUTEditPanelIMEditor, LUTEditPanel3D, ExportLUTOperator, LUTSelectionModalOperator]
 def register():
     saved_rows.register()
     for c in CLASSES:

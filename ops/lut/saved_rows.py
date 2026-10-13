@@ -9,6 +9,7 @@ from ...utils.LUT import LUT as LUTType
 from .util import is_LUT_image
 from ..utils import images as image_util
 from .lut_panel import LUTProperty
+from .selector_modal import LUTSelectionModalOperator
 
 from ...__init__ import ADDON_DIR
 
@@ -322,6 +323,7 @@ class LUTRowsList(bpy.types.UIList):
 def panel_draw(layout: bpy.types.UILayout, context: bpy.types.Context, bridge: SavedLUTRowsBridge):
     col = layout.column()
     selected_row = col.row()
+    selected_row.operator(LUTSelectionModalOperator.bl_idname, icon='EYEDROPPER', text="")
     selected_row.prop(bridge.editor_pg, "selected_row")
     #selected_row.alignment = "LEFT"
     selected_row.operator(CopyLUTRowOperator.bl_idname, icon='COPYDOWN', text="")
