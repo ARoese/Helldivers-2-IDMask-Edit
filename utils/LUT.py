@@ -10,6 +10,8 @@ import itertools
 import pprint
 import math
 
+import json
+
 from . import env
 
 class LUTException(Exception):
@@ -125,6 +127,9 @@ class LUT:
         output.write(res.stdout)
         return output
 
+    def to_json(self) -> str:
+        return json.dumps(self._channels)
+
     def take_row(self, idx: int) -> LUT:
         return LUT([self.get_row(idx)])
 
@@ -154,6 +159,26 @@ def lut_row_equals(r1: List[Float4], r2: List[Float4]) -> bool:
         return True
 
     return all(f4_eq(c1, c2) for c1,c2 in zip(r1, r2))
+
+def from_json(j: str) -> LUT:
+    j = json.loads(j)
+    if (
+            not isinstance(j, List) 
+            or len(j) == 0 
+            or not isinstance(j[0], List) 
+            or len(j[0]) == 0 
+            or len(j[0][0]) != 4 
+            or not isinstance(j[0][0][0], float)
+        ):
+        raise ValueError(f"json is not in the correct shape for LUT: {str(j)}")
+
+    def coerce_float4(x) -> Float4:
+        if len(x) != 4:
+            raise ValueError("LUT pixel is not float4")
+        return tuple(x)
+    
+    json_reshape = [[coerce_float4(pixel) for pixel in row] for row in j]
+    return LUT(json_reshape)
 
 def from_matrix(matrix: bytes) -> LUT:
     if len(matrix) < 8:
